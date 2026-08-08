@@ -1,0 +1,15 @@
+NAME="CapivaraOS HERD"
+VERSION="1.0.0 (Community)"
+ID=capivaraos-herd
+ID_LIKE="fedora rhel"
+VERSION_ID=1.0.0
+VERSION_CODENAME=""
+PLATFORM_ID="platform:f45"
+PRETTY_NAME="CapivaraOS HERD Community 1.0.0"
+ANSI_COLOR="0;38;2;107;79;54"
+LOGO=capivaraos-logo
+CPE_NAME="cpe:/o:capivaraos:herd:1.0.0"
+HOME_URL="https://capivaraos.org/"
+DOCUMENTATION_URL="https://capivaraos.org/docs/herd/"
+SUPPORT_URL="https://capivaraos.org/comunidade/"
+BUG_REPORT_URL="https://github.com/capivaraos/capivaraos-herd/issues/"

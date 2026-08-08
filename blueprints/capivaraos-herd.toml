@@ -1,0 +1,99 @@
+name = "capivaraos-herd"
+description = "CapivaraOS HERD Community — servidor headless, nascido no Fedora 45"
+version = "1.0.0"
+
+# =============================================================================
+# CapivaraOS HERD Community 1.0.0 — blueprint osbuild / Image Builder
+# =============================================================================
+# Fonte de verdade única do build (ver PROD-40). A partir desta blueprint o
+# build.sh produz DUAS imagens:
+#   - qcow2            (nuvem/VM, com cloud-init)
+#   - image-installer  (ISO instalador headless para bare-metal/VM)
+# para x86_64 e aarch64 (um builder osbuild por arquitetura).
+#
+# HERD nasce no Fedora 45 (HERD 1.x = F45), base diferente da geração 1.x dos
+# desktops (F44). Perfil alinhado à PROD-38 (escopo técnico) e PROD-41
+# (hardening/compliance).
+# =============================================================================
+
+# ── Identidade visual do HERD (RPM próprio) ─────────────────────────────────
+# Entra via source customizado do composer apontando SÓ para o RPM correto do
+# HERD (ver build.sh e rpm/). Evita puxar branding de outra spin — mesma
+# armadilha de NEVRA/SOURCES compartilhados dos desktops (BUG-30).
+[[packages]]
+name = "capivaraos-herd-branding"
+version = "*"
+
+# ── Núcleo de servidor ──────────────────────────────────────────────────────
+[[packages]]
+name = "cloud-init"
+version = "*"
+
+[[packages]]
+name = "qemu-guest-agent"
+version = "*"
+
+[[packages]]
+name = "openssh-server"
+version = "*"
+
+[[packages]]
+name = "firewalld"
+version = "*"
+
+[[packages]]
+name = "chrony"
+version = "*"
+
+# glibc-langpack-pt para que pt_BR.UTF-8 exista na imagem (server mínimo não
+# traz todos os langpacks como o glibc-all-langpacks dos lives de desktop).
+[[packages]]
+name = "glibc-langpack-pt"
+version = "*"
+
+[[packages]]
+name = "glibc-langpack-en"
+version = "*"
+
+# =============================================================================
+# CUSTOMIZAÇÕES
+# =============================================================================
+[customizations]
+hostname = "capivaraos-herd"
+
+[customizations.locale]
+languages = ["pt_BR.UTF-8", "en_US.UTF-8"]
+keyboard = "br-abnt2"
+
+[customizations.timezone]
+timezone = "America/Sao_Paulo"
+ntpservers = ["pool.ntp.br"]
+
+# ── Firewall restritivo: só SSH liberado por padrão ─────────────────────────
+[customizations.firewall.services]
+enabled = ["ssh"]
+
+# ── Serviços habilitados ────────────────────────────────────────────────────
+# cloud-init fica habilitado na base; em bare-metal sem datasource ele
+# essencialmente no-opera. Um perfil bare-metal que o desabilite pode vir
+# depois (refino da PROD-41).
+[customizations.services]
+enabled = ["sshd", "firewalld", "chronyd", "cloud-init"]
+
+# ── SSH endurecido ──────────────────────────────────────────────────────────
+# ATENÇÃO (PROD-41): PasswordAuthentication no exige chave SSH. Na qcow2 o
+# cloud-init injeta a chave → ok. No caminho da ISO, o instalador precisa
+# garantir chave/console antes de aplicar isto em produção. Mantido aqui como
+# baseline de hardening; finalização de política é da PROD-41.
+[[customizations.files]]
+path = "/etc/ssh/sshd_config.d/50-capivaraos-herd.conf"
+mode = "0600"
+user = "root"
+group = "root"
+data = """
+# CapivaraOS HERD — baseline de hardening SSH (ver PROD-41)
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+X11Forwarding no
+"""
