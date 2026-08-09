@@ -1,7 +1,10 @@
 # CapivaraOS HERD
 
 Linha de **servidor** do CapivaraOS. Este repositório contém a infraestrutura de
-build das imagens do **HERD Community** (edição gratuita), nascida no **Fedora 45**.
+build das imagens do **HERD Community** (edição gratuita), com base **Fedora 44**
+— a mesma geração das spins de desktop (Marsh/Pup/Snout 1.x). O **Fedora 45**
+fica reservado para a **geração 2** (HERD 2.x + próxima leva das spins), lançada
+em conjunto quando o F45 estiver maduro.
 
 > **Fase de lançamento:** apenas o **HERD Community**. (Jira: épico **PROD-4**;
 > build/CI = **PROD-40**; escopo técnico = **PROD-38**; hardening = **PROD-41**.)
@@ -28,7 +31,8 @@ natural para a variante **bootc/imutável** (fase 2). Ver PROD-40.
 
 ## Pré-requisitos
 
-- Host **Fedora 45** (nesta fase pré-GA, um host/VM com o F45 pré-release).
+- Host **Fedora 44** (mesma base das spins) — builda direto na máquina de dev,
+  sem VM.
 - osbuild-composer + composer-cli:
   ```bash
   sudo dnf install -y osbuild-composer composer-cli rpm-build createrepo_c

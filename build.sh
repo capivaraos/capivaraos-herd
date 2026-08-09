@@ -9,8 +9,8 @@
 # aarch64 (o osbuild compõe para a arch do host).
 #
 # PRÉ-REQUISITOS:
-#   - Host Fedora 45 (HERD nasce no F45). Nesta fase pré-GA, use um host/VM com
-#     o Fedora 45 pré-release (Branched/Rawhide).
+#   - Host Fedora 44 (HERD 1.x = F44, mesma base das spins). Builda direto na
+#     máquina de dev — sem VM. O Fedora 45 fica para a geração 2 (HERD 2.x).
 #   - osbuild-composer + composer-cli instalados e o serviço ativo:
 #       sudo dnf install -y osbuild-composer composer-cli
 #       sudo systemctl enable --now osbuild-composer.socket
@@ -39,11 +39,12 @@ TYPES=("$@")
 
 echo "==> CapivaraOS HERD Community ${VERSION} (${ARCH})"
 
-# ── Sanidade: estamos num host F45? ─────────────────────────────────────────
+# ── Sanidade: estamos num host F44? ─────────────────────────────────────────
+# osbuild compõe para o release do host; HERD 1.x tem base F44.
 OSVER="$(. /etc/os-release && echo "${VERSION_ID:-?}")"
-if [ "$OSVER" != "45" ]; then
-    echo "AVISO: host é Fedora ${OSVER}, não 45. O HERD nasce no F45; a" >&2
-    echo "       composição deve rodar num host/VM Fedora 45." >&2
+if [ "$OSVER" != "44" ]; then
+    echo "AVISO: host é Fedora ${OSVER}, não 44. O HERD 1.x tem base F44; a" >&2
+    echo "       imagem sairia sobre F${OSVER}. Rode num host Fedora 44." >&2
 fi
 
 command -v composer-cli >/dev/null || {

@@ -27,7 +27,7 @@ Provides:       system-release-branding = %{version}-%{release}
 %description
 Pacote de identidade do CapivaraOS HERD Community: /etc/os-release,
 /etc/issue e mensagem do dia (/etc/motd.d/capivaraos-herd). Voltado a
-servidor headless nascido no Fedora 45.
+servidor headless com base Fedora 44.
 
 %prep
 %setup -q
