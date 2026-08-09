@@ -128,8 +128,14 @@ for TYPE in "${TYPES[@]}"; do
         esac
     done
 
+    # Extensão amigável: qcow2 -> .qcow2, image-installer -> .iso
+    case "$TYPE" in
+        qcow2)           EXT="qcow2" ;;
+        image-installer) EXT="iso" ;;
+        *)               EXT="${TYPE}.img" ;;
+    esac
     sudo composer-cli compose image "$COMPOSE_ID" --filename \
-        "$RESULT_DIR/CapivaraOS-HERD-${VERSION}-${ARCH}.${TYPE}.img"
+        "$RESULT_DIR/CapivaraOS-HERD-${VERSION}-${ARCH}.${EXT}"
     echo "==> ${TYPE} pronto em ${RESULT_DIR}/"
 done
 
