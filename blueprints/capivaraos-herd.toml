@@ -80,8 +80,11 @@ enabled = ["ssh"]
 # cloud-init fica habilitado na base; em bare-metal sem datasource ele
 # essencialmente no-opera. Um perfil bare-metal que o desabilite pode vir
 # depois (refino da PROD-41).
+# NB: no Fedora 44 não existe mais "cloud-init.service" — o pacote orquestra o
+# ciclo (local/network/config/final) via cloud-init.target. Habilitar o alvo
+# é a forma canônica; pedir "cloud-init" falha ("Unit does not exist").
 [customizations.services]
-enabled = ["sshd", "firewalld", "chronyd", "cloud-init"]
+enabled = ["sshd", "firewalld", "chronyd", "cloud-init.target"]
 
 # ── SSH endurecido ──────────────────────────────────────────────────────────
 # ATENÇÃO (PROD-41): PasswordAuthentication no exige chave SSH. Na qcow2 o
