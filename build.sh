@@ -52,20 +52,50 @@ command -v composer-cli >/dev/null || {
     exit 1
 }
 
-# ── 1. Source do composer com o branding do HERD ────────────────────────────
-# Aponta SÓ para o nosso repo local, garantindo o RPM correto do HERD (evita a
-# armadilha de branding de outra spin — BUG-30).
+# ── 1. Source do composer com o branding do HERD (servido por HTTP local) ───
+# IMPORTANTE: o osbuild baixa as fontes via org.osbuild.curl. Um source
+# `file://` faz o parser de resultado do curl não registrar o item (o curl não
+# devolve status HTTP p/ file://) → lista de resultados vazia → o osbuild
+# estoura `IndexError` em sources.py e a composição falha com "did not return
+# any output". Por isso servimos o repo de branding por HTTP local (forma
+# suportada). Aponta SÓ para o RPM correto do HERD (evita branding de outra
+# spin — BUG-30).
+HTTP_PID=""
+cleanup() { [ -n "$HTTP_PID" ] && kill "$HTTP_PID" 2>/dev/null || true; }
+trap cleanup EXIT
+
 if [ -d "$BRANDING_REPO" ]; then
+    BRANDING_PORT="${BRANDING_PORT:-8099}"
+    python3 -m http.server "$BRANDING_PORT" --bind 127.0.0.1 \
+        --directory "$BRANDING_REPO" >/dev/null 2>&1 &
+    HTTP_PID=$!
+
+    # Espera o servidor responder antes de registrar o source.
+    for _ in $(seq 1 20); do
+        if curl -sf "http://127.0.0.1:${BRANDING_PORT}/repodata/repomd.xml" -o /dev/null; then
+            break
+        fi
+        sleep 0.5
+    done
+    curl -sf "http://127.0.0.1:${BRANDING_PORT}/repodata/repomd.xml" -o /dev/null || {
+        echo "ERRO: servidor HTTP do branding não respondeu na porta ${BRANDING_PORT}." >&2
+        echo "      (defina BRANDING_PORT=<livre> se 8099 estiver em uso.)" >&2
+        exit 1
+    }
+
     SRC_TOML="$(mktemp)"
     cat > "$SRC_TOML" <<EOF
 id = "capivaraos-herd-branding"
 name = "CapivaraOS HERD branding (local)"
 type = "yum-baseurl"
-url = "file://${BRANDING_REPO}"
+url = "http://127.0.0.1:${BRANDING_PORT}/"
 check_gpg = false
 check_ssl = false
 system = false
 EOF
+    # Remove um source homônimo antigo (ex.: file:// de um run anterior) para
+    # garantir que a URL HTTP substitua de fato.
+    sudo composer-cli sources delete capivaraos-herd-branding 2>/dev/null || true
     sudo composer-cli sources add "$SRC_TOML"
     rm -f "$SRC_TOML"
 else
