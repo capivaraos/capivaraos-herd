@@ -56,6 +56,34 @@ createrepo_c /var/tmp/capivaraos-herd-repo
 
 Saída em `out/`.
 
+## ISO instaladora brandeada (lorax) — PROD-66
+
+O `image-installer` do osbuild acima é funcional, mas o **instalador** (menu de
+boot + Anaconda) herda a marca Fedora, que o osbuild não deixa sobrescrever.
+Para uma ISO instaladora **sem marca Fedora**, use o fluxo lorax:
+
+```bash
+# 1. RPMs de branding E de logos do instalador, servidos no repo local
+./rpm/build-rpm.sh
+./rpm/build-rpm-logos.sh
+mkdir -p /var/tmp/capivaraos-herd-repo
+cp ~/rpmbuild/RPMS/noarch/capivaraos-herd-branding-*.rpm \
+   ~/rpmbuild/RPMS/noarch/capivaraos-herd-logos-*.rpm \
+   /var/tmp/capivaraos-herd-repo/
+createrepo_c /var/tmp/capivaraos-herd-repo
+
+# 2. ISO instaladora offline e brandeada (precisa root)
+sudo dnf install -y lorax createrepo_c
+sudo ./build-iso.sh
+```
+
+- `capivaraos-herd-logos` substitui o `fedora-logos` no ambiente do Anaconda.
+- `lorax -p "CapivaraOS HERD"` brandeia o nome de produto (menu/`.buildstamp`).
+- `mkksiso` embute o `kickstart/capivaraos-herd.ks` (perfil de servidor) e um
+  repo offline, tornando a instalação autossuficiente.
+
+Saída: `out/CapivaraOS-HERD-<versão>-<arch>.installer.iso`.
+
 ## Perfil do sistema (v1)
 
 Headless · SELinux **enforcing** · `firewalld` restritivo (só SSH) · SSH
