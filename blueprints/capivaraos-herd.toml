@@ -116,4 +116,10 @@ PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 X11Forwarding no
+MaxAuthTries 3
+LoginGraceTime 30
+AllowAgentForwarding no
+# Ciphers/MACs/KEX ficam a cargo das crypto-policies do sistema (já fortes por
+# padrão no Fedora) — não hardcodar aqui. AllowTcpForwarding não é desabilitado
+# para não quebrar túneis legítimos de administração.
 """
