@@ -81,12 +81,14 @@ keyboard = "br-abnt2"
 timezone = "America/Sao_Paulo"
 ntpservers = ["pool.ntp.br"]
 
-# ── Firewall: SSH + Cockpit (9090) liberados ────────────────────────────────
-# NB: isto ADICIONA serviços à zona public; a zona ainda mantém os defaults do
-# Fedora (mdns, dhcpv6-client). Fechar a zona para só o necessário é tarefa da
-# PROD-41 (hardening).
+# ── Firewall (hardening, PROD-41) ───────────────────────────────────────────
+# Libera SSH + Cockpit (9090). Remove o mdns (descoberta avahi — superfície
+# desnecessária num servidor). MANTÉM o dhcpv6-client: é serviço de CLIENTE
+# (recebe respostas DHCPv6); removê-lo quebraria o endereçamento IPv6 em redes
+# que usam DHCPv6. Resultado da zona public: ssh, cockpit, dhcpv6-client.
 [customizations.firewall.services]
 enabled = ["ssh", "cockpit"]
+disabled = ["mdns"]
 
 # ── Serviços habilitados ────────────────────────────────────────────────────
 # cloud-init fica habilitado na base; em bare-metal sem datasource ele
