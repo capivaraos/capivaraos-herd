@@ -134,9 +134,12 @@ for TYPE in "${TYPES[@]}"; do
         image-installer) EXT="iso" ;;
         *)               EXT="${TYPE}.img" ;;
     esac
-    sudo composer-cli compose image "$COMPOSE_ID" --filename \
-        "$RESULT_DIR/CapivaraOS-HERD-${VERSION}-${ARCH}.${EXT}"
-    echo "==> ${TYPE} pronto em ${RESULT_DIR}/"
+    OUTFILE="$RESULT_DIR/CapivaraOS-HERD-${VERSION}-${ARCH}.${EXT}"
+    # 'compose image' se recusa a sobrescrever ("exists, skipping download"),
+    # então removemos a saída anterior (pode ser root, daí o fallback com sudo).
+    rm -f "$OUTFILE" 2>/dev/null || sudo rm -f "$OUTFILE"
+    sudo composer-cli compose image "$COMPOSE_ID" --filename "$OUTFILE"
+    echo "==> ${TYPE} pronto em ${OUTFILE}"
 done
 
 echo
