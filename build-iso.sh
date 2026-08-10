@@ -67,8 +67,8 @@ for rpm in capivaraos-herd-branding capivaraos-herd-logos; do
     }
 done
 
-rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
+BOOT_ISO="$WORK/lorax/images/boot.iso"
 
 # ── 1. Instalador brandeado (lorax) ──────────────────────────────────────────
 # -i capivaraos-herd-logos: o lorax instala "fedora-logos" por nome (derivado do
@@ -77,6 +77,12 @@ mkdir -p "$WORK" "$OUT"
 #    fedora-logos (o removepkg do lorax quebra em pacote não instalado).
 #    -p/-v/-t: nome de produto no menu e no .buildstamp.
 # NB: lorax exige que o diretório de saída NÃO exista.
+# Reaproveita o instalador já construído (lorax é a etapa mais longa). Para
+# forçar a reconstrução, apague $WORK/lorax ou rode com FORCE_LORAX=1.
+if [ -f "$BOOT_ISO" ] && [ -z "${FORCE_LORAX:-}" ]; then
+    echo "==> 1/3: reutilizando lorax existente ($BOOT_ISO). (FORCE_LORAX=1 refaz)"
+else
+rm -rf "$WORK/lorax"
 echo "==> 1/3: lorax (instalador brandeado)..."
 # Repos como arquivos .repo: EXCLUÍMOS o fedora-logos real dos repos Fedora, para
 # o nosso capivaraos-herd-logos (Provides fedora-logos) ser o ÚNICO provedor
@@ -118,9 +124,12 @@ lorax -p "$PRODUCT" -v "$VERSION" -r "$VERSION" -t "$VARIANT" \
     --repo "$REPODIR/updates.repo" \
     --repo "$REPODIR/herd-local.repo" \
     "$WORK/lorax"
+fi
 
-BOOT_ISO="$WORK/lorax/images/boot.iso"
 [ -f "$BOOT_ISO" ] || { echo "ERRO: lorax não gerou ${BOOT_ISO}." >&2; exit 1; }
+
+# Repo offline é sempre reconstruído (barato perto do lorax).
+rm -rf "$WORK/repo" "$WORK/dnfcache" "$WORK/instroot"
 
 # ── 2. Repo offline (payload) ────────────────────────────────────────────────
 # dnf5: 'install --downloadonly' aceita GRUPOS (@core) e resolve a transação
