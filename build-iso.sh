@@ -78,13 +78,42 @@ mkdir -p "$WORK" "$OUT"
 #    -p/-v/-t: nome de produto no menu e no .buildstamp.
 # NB: lorax exige que o diretório de saída NÃO exista.
 echo "==> 1/3: lorax (instalador brandeado)..."
+# Repos como arquivos .repo: EXCLUÍMOS o fedora-logos real dos repos Fedora, para
+# o nosso capivaraos-herd-logos (Provides fedora-logos) ser o ÚNICO provedor
+# quando o lorax fizer "installpkg fedora-logos" (nome derivado do release).
+REPODIR="$WORK/repos.d"
+mkdir -p "$REPODIR"
+cat > "$REPODIR/fedora.repo" <<EOF
+[fedora]
+name=Fedora ${RELEASEVER} - ${ARCH}
+baseurl=https://download.fedoraproject.org/pub/fedora/linux/releases/${RELEASEVER}/Everything/${ARCH}/os/
+enabled=1
+gpgcheck=0
+exclude=fedora-logos
+EOF
+cat > "$REPODIR/updates.repo" <<EOF
+[updates]
+name=Fedora ${RELEASEVER} - ${ARCH} - Updates
+baseurl=https://download.fedoraproject.org/pub/fedora/linux/updates/${RELEASEVER}/Everything/${ARCH}/
+enabled=1
+gpgcheck=0
+exclude=fedora-logos
+EOF
+cat > "$REPODIR/herd-local.repo" <<EOF
+[herd-local]
+name=CapivaraOS HERD local
+baseurl=file://${BRANDING_REPO}
+enabled=1
+gpgcheck=0
+EOF
+
 lorax -p "$PRODUCT" -v "$VERSION" -r "$VERSION" -t "$VARIANT" \
     --volid "$VOLID" \
     --isfinal \
     -i capivaraos-herd-logos \
-    -s "https://download.fedoraproject.org/pub/fedora/linux/releases/${RELEASEVER}/Everything/${ARCH}/os/" \
-    -s "https://download.fedoraproject.org/pub/fedora/linux/updates/${RELEASEVER}/Everything/${ARCH}/" \
-    -s "file://${BRANDING_REPO}" \
+    --repo "$REPODIR/fedora.repo" \
+    --repo "$REPODIR/updates.repo" \
+    --repo "$REPODIR/herd-local.repo" \
     "$WORK/lorax"
 
 BOOT_ISO="$WORK/lorax/images/boot.iso"

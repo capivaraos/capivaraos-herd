@@ -13,7 +13,7 @@ Name:           capivaraos-herd-logos
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do capivaraos-herd-branding (evita colisão de
 # NEVRA em ~/rpmbuild compartilhado — ver BUG-30).
-Release:        2%{?dist}.herd
+Release:        3%{?dist}.herd
 Summary:        Identidade do instalador (Anaconda) do CapivaraOS HERD
 
 License:        CC-BY-SA-4.0
@@ -26,13 +26,13 @@ BuildRequires:  ImageMagick
 
 # Substitui o fedora-logos no ambiente do instalador. O lorax deriva o pacote de
 # logos do release (fedora-release-server) e instala "fedora-logos" POR NOME
-# (treebuilder.py). Por isso FORNECEMOS e OBSOLETAMOS fedora-logos: quando o
-# lorax pede fedora-logos, o dnf instala o nosso no lugar. Versões espelham a do
-# fedora-logos atual para satisfazer requisitos versionados.
+# (treebuilder.py). FORNECEMOS os virtuais + o próprio nome fedora-logos; o
+# build-iso.sh EXCLUI o fedora-logos real dos repos Fedora, então o nosso é o
+# único provedor de "fedora-logos" e é o escolhido. (Não usamos Obsoletes: com o
+# -i explícito, o dnf acusava "conflicting requests" contra o fedora-logos real.)
 Provides:       system-logos = 42.0.1
 Provides:       redhat-logos = 42.0.1
 Provides:       fedora-logos = 42.0.1
-Obsoletes:      fedora-logos < 42.0.2
 
 %description
 Arte de identidade do CapivaraOS HERD para o instalador Anaconda: logo e fundo
@@ -79,6 +79,11 @@ install -m 0644 splash.png syslinux-splash.png %{buildroot}%{_datadir}/anaconda/
 %{_datadir}/anaconda/boot/syslinux-splash.png
 
 %changelog
+* Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
+- Remove Obsoletes fedora-logos (causava "conflicting requests" no lorax com o
+  -i explícito). Mantém Provides fedora-logos; o build-iso.sh passa a excluir o
+  fedora-logos real dos repos Fedora, tornando o nosso o único provedor.
+
 * Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
 - Substitui fedora-logos por Provides+Obsoletes (não Conflicts): o lorax instala
   "fedora-logos" por nome (derivado do release), então precisamos que o dnf
