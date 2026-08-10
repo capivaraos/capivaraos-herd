@@ -123,19 +123,38 @@ BOOT_ISO="$WORK/lorax/images/boot.iso"
 [ -f "$BOOT_ISO" ] || { echo "ERRO: lorax não gerou ${BOOT_ISO}." >&2; exit 1; }
 
 # ── 2. Repo offline (payload) ────────────────────────────────────────────────
-# --installroot vazio força o dnf a baixar TUDO para uma instalação limpa (não
-# só o que falta no host). Sem weak deps para um servidor enxuto.
+# dnf5: 'install --downloadonly' aceita GRUPOS (@core) e resolve a transação
+# inteira; baixamos para um cachedir próprio (keepcache) e colhemos os RPMs.
+# Incluímos explicitamente kernel + bootloader (não são deps de @core, mas o
+# Anaconda precisa deles para uma instalação bootável offline).
 echo "==> 2/3: baixando pacotes do payload para repo offline..."
 mkdir -p "$WORK/repo"
+DNFCACHE="$WORK/dnfcache"
 dnf -y --releasever="$RELEASEVER" \
     --installroot="$WORK/instroot" \
     --repofrompath="herd-local,file://${BRANDING_REPO}" \
     --setopt=herd-local.gpgcheck=0 \
     --setopt=install_weak_deps=False \
-    install --downloadonly --downloaddir="$WORK/repo" \
-    @core "${PAYLOAD_PKGS[@]}"
-createrepo_c "$WORK/repo" >/dev/null
-echo "    $(ls "$WORK/repo"/*.rpm | wc -l) RPMs no repo offline."
+    --setopt=cachedir="$DNFCACHE" --setopt=keepcache=1 \
+    install --downloadonly \
+    @core NetworkManager kernel dracut \
+    grub2-pc grub2-pc-modules grub2-efi-x64 grub2-efi-x64-modules shim-x64 \
+    grub2-tools grub2-tools-minimal grub2-tools-extra efibootmgr \
+    "${PAYLOAD_PKGS[@]}"
+# Colhe os RPMs baixados do cache.
+find "$DNFCACHE" -name '*.rpm' -exec cp -n {} "$WORK/repo/" \;
+# Pacotes file:// (nosso branding) podem não ir ao cache; copia direto.
+cp -n "$BRANDING_REPO"/capivaraos-herd-branding-*.rpm "$WORK/repo/" 2>/dev/null || true
+# comps (grupos) para o @core do kickstart resolver no Anaconda.
+COMPS_ZST="$(find /var/cache/libdnf5 -path '*fedora*' -name '*comps-Everything*.xml.zst' 2>/dev/null | head -1)"
+if [ -n "$COMPS_ZST" ]; then
+    zstd -dc "$COMPS_ZST" > "$WORK/comps.xml"
+    createrepo_c -g "$WORK/comps.xml" "$WORK/repo" >/dev/null
+else
+    echo "AVISO: comps do Fedora não achado no cache; @core pode não resolver no Anaconda." >&2
+    createrepo_c "$WORK/repo" >/dev/null
+fi
+echo "    $(ls "$WORK/repo"/*.rpm 2>/dev/null | wc -l) RPMs no repo offline."
 
 # ── 3. Injeta kickstart + repo na ISO (mkksiso) ──────────────────────────────
 # -a adiciona o repo em /repo na ISO; -c aponta o Anaconda para ele; --ks embute
