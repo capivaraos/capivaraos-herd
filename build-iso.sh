@@ -83,10 +83,13 @@ echo "==> 1/3: lorax (instalador brandeado)..."
 # quando o lorax fizer "installpkg fedora-logos" (nome derivado do release).
 REPODIR="$WORK/repos.d"
 mkdir -p "$REPODIR"
+# metalink (não baseurl fixo): traz a lista de espelhos com checksums e faz
+# failover automático — um baseurl único cai num espelho só e, se ele estiver
+# incompleto, dá 404 sem alternativa (foi o que quebrou o 1º download).
 cat > "$REPODIR/fedora.repo" <<EOF
 [fedora]
 name=Fedora ${RELEASEVER} - ${ARCH}
-baseurl=https://download.fedoraproject.org/pub/fedora/linux/releases/${RELEASEVER}/Everything/${ARCH}/os/
+metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-${RELEASEVER}&arch=${ARCH}
 enabled=1
 gpgcheck=0
 exclude=fedora-logos
@@ -94,7 +97,7 @@ EOF
 cat > "$REPODIR/updates.repo" <<EOF
 [updates]
 name=Fedora ${RELEASEVER} - ${ARCH} - Updates
-baseurl=https://download.fedoraproject.org/pub/fedora/linux/updates/${RELEASEVER}/Everything/${ARCH}/
+metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f${RELEASEVER}&arch=${ARCH}
 enabled=1
 gpgcheck=0
 exclude=fedora-logos
