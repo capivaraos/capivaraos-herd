@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        3%{?dist}.herd
+Release:        4%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd) do CapivaraOS HERD Community
 
 License:        CC-BY-SA-4.0
@@ -80,6 +80,23 @@ for kver in $(ls /lib/modules 2>/dev/null); do
     [ -f "/lib/modules/${kver}/vmlinuz" ] && \
         kernel-install add "${kver}" "/lib/modules/${kver}/vmlinuz" >/dev/null 2>&1 || true
 done
+# A entrada de RESCUE é gerada uma única vez por um plugin próprio e não é
+# regravada pelo kernel-install acima; seu título fica com a marca antiga
+# ("Fedora Linux ..."). Corrigimos só a linha 'title' (não toca kernel/initramfs),
+# preservando o token "0-rescue-<id>", derivando o nome do nosso os-release.
+if [ -r %{_sysconfdir}/os-release ]; then
+    ( . %{_sysconfdir}/os-release
+      for e in /boot/loader/entries/*rescue*.conf; do
+          [ -f "$e" ] || continue
+          grep -q "^title ${NAME} " "$e" && continue
+          rid="$(sed -n 's/^title .*(\(0-rescue-[^)]*\)).*/\1/p' "$e")"
+          if [ -n "$rid" ]; then
+              sed -i "s|^title .*|title ${NAME} (${rid}) ${VERSION}|" "$e"
+          else
+              sed -i "s|^title .*|title ${NAME} (rescue) ${VERSION}|" "$e"
+          fi
+      done ) 2>/dev/null || true
+fi
 
 %files
 %dir %{_datadir}/capivaraos-herd
@@ -88,6 +105,12 @@ done
 %{_sysconfdir}/motd.d/capivaraos-herd
 
 %changelog
+* Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-4.herd
+- Corrige também o título da entrada de RESCUE no GRUB (ficava "Fedora Linux"):
+  o trigger passa a reescrever a linha 'title' das entradas *rescue*.conf
+  derivando NAME/VERSION do nosso os-release, preservando o token 0-rescue-<id>.
+  Só edita o texto do título (não mexe em kernel/initramfs); idempotente.
+
 * Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
 - Corrige título "Fedora Linux" no GRUB do sistema instalado pela ISO: a guarda
   do %transfiletriggerin passa a checar /usr/lib/os-release (nunca reescrito por
