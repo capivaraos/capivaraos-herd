@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        2%{?dist}.herd
+Release:        3%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd) do CapivaraOS HERD Community
 
 License:        CC-BY-SA-4.0
@@ -65,8 +65,15 @@ cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
 # %{_prefix}/lib (onde vive o os-release "real" do Fedora). Ver
 # [[reference_rpm_filetriggers]].
 %transfiletriggerin -- %{_prefix}/lib
-# Caso comum: nosso os-release intacto → nada a fazer.
-grep -q '^NAME="CapivaraOS HERD"' %{_sysconfdir}/os-release 2>/dev/null && exit 0
+# Guarda: checamos o /usr/lib/os-release (que NUNCA é reescrito por nós — só
+# mexemos no /etc/os-release). Como ele fica sempre com o NAME do Fedora, esta
+# condição NÃO curto-circuita, e o trigger sempre reaplica + roda kernel-install.
+# ISSO É PROPOSITAL: o kernel-install precisa rodar DEPOIS do os-release estar
+# corrigido para gravar o título BLS certo (senão o GRUB fica "Fedora Linux ..."
+# — foi o bug do instalador, o kernel-install do Anaconda roda antes do nosso
+# %posttrans). NÃO troque para /etc/os-release: isso faria sair cedo e pular o
+# kernel-install, reintroduzindo o bug.
+grep -q '^NAME="CapivaraOS HERD"' %{_prefix}/lib/os-release 2>/dev/null && exit 0
 cp -f %{_datadir}/capivaraos-herd/os-release %{_sysconfdir}/os-release
 cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
 for kver in $(ls /lib/modules 2>/dev/null); do
@@ -81,6 +88,14 @@ done
 %{_sysconfdir}/motd.d/capivaraos-herd
 
 %changelog
+* Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
+- Corrige título "Fedora Linux" no GRUB do sistema instalado pela ISO: a guarda
+  do %transfiletriggerin passa a checar /usr/lib/os-release (nunca reescrito por
+  nós) em vez de /etc/os-release. Assim o trigger não sai cedo e sempre roda o
+  kernel-install DEPOIS do os-release corrigido, gravando o título BLS certo.
+  (No Anaconda o kernel-install roda antes do nosso %posttrans; a guarda em
+  /etc curto-circuitava e pulava a correção do BLS.)
+
 * Sun Aug 09 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
 - Não declara mais /etc/os-release e /etc/issue no %files: eram donos do
   fedora-release-common e o rpm --install do osbuild falhava com conflito de
