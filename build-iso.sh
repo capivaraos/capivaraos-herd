@@ -128,10 +128,13 @@ fi
 
 [ -f "$BOOT_ISO" ] || { echo "ERRO: lorax não gerou ${BOOT_ISO}." >&2; exit 1; }
 
-# Repo offline é sempre reconstruído (barato perto do lorax).
-rm -rf "$WORK/repo" "$WORK/dnfcache" "$WORK/instroot"
-
 # ── 2. Repo offline (payload) ────────────────────────────────────────────────
+# Reaproveita o repo se já existir (FORCE_REPO=1 refaz) — assim ajustes só no
+# kickstart viram só o mkksiso (segundos).
+if [ -d "$WORK/repo/repodata" ] && [ -z "${FORCE_REPO:-}" ]; then
+    echo "==> 2/3: reutilizando repo offline existente. (FORCE_REPO=1 refaz)"
+else
+rm -rf "$WORK/repo" "$WORK/dnfcache" "$WORK/instroot"
 # dnf5: 'install --downloadonly' aceita GRUPOS (@core) e resolve a transação
 # inteira; baixamos para um cachedir próprio (keepcache) e colhemos os RPMs.
 # Incluímos explicitamente kernel + bootloader (não são deps de @core, mas o
@@ -168,6 +171,7 @@ else
     createrepo_c "$WORK/repo" >/dev/null
 fi
 echo "    $(ls "$WORK/repo"/*.rpm 2>/dev/null | wc -l) RPMs no repo offline."
+fi
 
 # ── 3. Injeta kickstart + repo na ISO (mkksiso) ──────────────────────────────
 # -a adiciona o repo em /repo na ISO; -c aponta o Anaconda para ele; --ks embute
