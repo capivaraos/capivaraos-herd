@@ -139,8 +139,11 @@ rm -rf "$WORK/repo" "$WORK/dnfcache" "$WORK/instroot"
 echo "==> 2/3: baixando pacotes do payload para repo offline..."
 mkdir -p "$WORK/repo"
 DNFCACHE="$WORK/dnfcache"
+# --use-host-config: usa os repos do host (fedora/updates com metalink) além do
+# nosso herd-local; sem isso, com --installroot vazio o dnf5 não carrega repo
+# nenhum ("No repositories were loaded from the installroot").
 dnf -y --releasever="$RELEASEVER" \
-    --installroot="$WORK/instroot" \
+    --installroot="$WORK/instroot" --use-host-config \
     --repofrompath="herd-local,file://${BRANDING_REPO}" \
     --setopt=herd-local.gpgcheck=0 \
     --setopt=install_weak_deps=False \
