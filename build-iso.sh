@@ -152,6 +152,7 @@ dnf -y --releasever="$RELEASEVER" \
     @core NetworkManager kernel dracut \
     grub2-pc grub2-pc-modules grub2-efi-x64 grub2-efi-x64-modules shim-x64 \
     grub2-tools grub2-tools-minimal grub2-tools-extra efibootmgr \
+    lvm2 mdadm dosfstools xfsprogs e2fsprogs btrfs-progs \
     "${PAYLOAD_PKGS[@]}"
 # Colhe os RPMs baixados do cache.
 find "$DNFCACHE" -name '*.rpm' -exec cp -n {} "$WORK/repo/" \;
