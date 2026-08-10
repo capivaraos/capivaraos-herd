@@ -71,15 +71,17 @@ rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
 
 # ── 1. Instalador brandeado (lorax) ──────────────────────────────────────────
-# -i capivaraos-herd-logos + -e fedora-logos: força a nossa arte no ambiente do
-#    Anaconda (nosso pacote fornece o virtual system-logos e conflita com o
-#    fedora-logos). -p/-v/-t: nome de produto no menu e no .buildstamp.
+# -i capivaraos-herd-logos: o lorax instala "fedora-logos" por nome (derivado do
+#    release); como o nosso pacote Provides+Obsoletes fedora-logos, o dnf instala
+#    o nosso no lugar, trazendo a nossa arte para o Anaconda. NÃO usar -e
+#    fedora-logos (o removepkg do lorax quebra em pacote não instalado).
+#    -p/-v/-t: nome de produto no menu e no .buildstamp.
 # NB: lorax exige que o diretório de saída NÃO exista.
 echo "==> 1/3: lorax (instalador brandeado)..."
 lorax -p "$PRODUCT" -v "$VERSION" -r "$VERSION" -t "$VARIANT" \
     --volid "$VOLID" \
     --isfinal \
-    -i capivaraos-herd-logos -e fedora-logos \
+    -i capivaraos-herd-logos \
     -s "https://download.fedoraproject.org/pub/fedora/linux/releases/${RELEASEVER}/Everything/${ARCH}/os/" \
     -s "https://download.fedoraproject.org/pub/fedora/linux/updates/${RELEASEVER}/Everything/${ARCH}/" \
     -s "file://${BRANDING_REPO}" \

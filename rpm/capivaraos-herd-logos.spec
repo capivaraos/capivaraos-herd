@@ -13,7 +13,7 @@ Name:           capivaraos-herd-logos
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do capivaraos-herd-branding (evita colisão de
 # NEVRA em ~/rpmbuild compartilhado — ver BUG-30).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Identidade do instalador (Anaconda) do CapivaraOS HERD
 
 License:        CC-BY-SA-4.0
@@ -24,12 +24,15 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  ImageMagick
 
-# Substitui o fedora-logos no ambiente do instalador. Versões dos virtuais
-# espelham a do fedora-logos atual para satisfazer qualquer requisito versionado
-# (o Anaconda requer o virtual system-logos, não o fedora-logos por nome).
+# Substitui o fedora-logos no ambiente do instalador. O lorax deriva o pacote de
+# logos do release (fedora-release-server) e instala "fedora-logos" POR NOME
+# (treebuilder.py). Por isso FORNECEMOS e OBSOLETAMOS fedora-logos: quando o
+# lorax pede fedora-logos, o dnf instala o nosso no lugar. Versões espelham a do
+# fedora-logos atual para satisfazer requisitos versionados.
 Provides:       system-logos = 42.0.1
 Provides:       redhat-logos = 42.0.1
-Conflicts:      fedora-logos
+Provides:       fedora-logos = 42.0.1
+Obsoletes:      fedora-logos < 42.0.2
 
 %description
 Arte de identidade do CapivaraOS HERD para o instalador Anaconda: logo e fundo
@@ -76,8 +79,12 @@ install -m 0644 splash.png syslinux-splash.png %{buildroot}%{_datadir}/anaconda/
 %{_datadir}/anaconda/boot/syslinux-splash.png
 
 %changelog
+* Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
+- Substitui fedora-logos por Provides+Obsoletes (não Conflicts): o lorax instala
+  "fedora-logos" por nome (derivado do release), então precisamos que o dnf
+  escolha o nosso no lugar. Conflicts+`-e fedora-logos` quebrava o lorax
+  (removepkg de pacote não instalado).
+
 * Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de logos do instalador (Anaconda) do CapivaraOS HERD:
   sidebar-logo/bg, topbar, cabeçalho, splash e CSS de tema (marrom #6B4F36).
-  Substitui o fedora-logos no ambiente do lorax (Provides system-logos,
-  Conflicts fedora-logos), modelado no generic-logos.
