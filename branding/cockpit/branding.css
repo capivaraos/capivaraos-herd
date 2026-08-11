@@ -22,10 +22,12 @@ body.login-pf {
     background-image: none !important;
 }
 
-/* Badge: nosso logo (tile verde-escuro + capivara branca), gerado no %build. */
+/* Badge: nosso logo (tile verde-escuro + capivara branca), gerado no %build.
+ * Proporção casa com o asset 640x360 (~1.78:1); background-size: contain
+ * garante que a logo apareça inteira, sem corte. */
 #badge {
-    inline-size: 260px;
-    block-size: 104px;
+    inline-size: 240px;
+    block-size: 135px;
     background-image: url("logo.png");
     background-size: contain;
     background-repeat: no-repeat;

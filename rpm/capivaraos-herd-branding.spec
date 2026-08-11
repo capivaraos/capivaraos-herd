@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        6%{?dist}.herd
+Release:        7%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
 License:        CC-BY-SA-4.0
@@ -43,11 +43,14 @@ servidor headless com base Fedora 44.
 # BRANCA da capivara centralizada — "logo com fundo verde", que lê bem tanto na
 # página de login (fundo verde #2f7a3d) quanto no shell interno (fundo claro).
 # Um único asset serve aos dois temas (claro/escuro), sem precisar de logo-dark.
-# Renderizado em 2x (450x180) p/ hidpi; o CSS usa background-size: contain.
+# Renderizado em 2x (640x360) p/ hidpi; o CSS usa background-size: contain.
+# IMPORTANTE: a logo é redimensionada limitando LARGURA **e ALTURA** (560x300)
+# para caber inteira no tile — só limitar a largura a deixava mais alta que o
+# tile e cortava em cima/embaixo (bug visto no -6).
 cd cockpit
-convert -size 450x180 xc:none \
-    -fill '#163d1e' -draw 'roundrectangle 0,0,449,179,28,28' \
-    \( src/capivaraos-logo-branca.png -resize 380x \) -gravity center -composite \
+convert -size 640x360 xc:none \
+    -fill '#163d1e' -draw 'roundrectangle 0,0,639,359,52,52' \
+    \( src/capivaraos-logo-branca.png -resize 560x300 \) -gravity center -composite \
     logo.png
 # Ícones (cabeça branca sobre tile verde), quadrados: aba do navegador e iOS.
 convert -size 180x180 xc:none \
@@ -77,6 +80,17 @@ install -d %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd
 install -m 0644 cockpit/branding.css cockpit/logo.png \
     cockpit/apple-touch-icon.png cockpit/favicon.ico \
     %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd/
+
+# ── Overrides de manifest do Cockpit ────────────────────────────────────────
+# Remove os links de documentação que apontam para docs.redhat.com no menu Ajuda
+# (mecanismo oficial e estável do Cockpit: /etc/cockpit/<pacote>.override.json,
+# mesclado sobre o manifest.json do pacote). Assim o menu fica com o nosso link
+# de docs (derivado do DOCUMENTATION_URL do os-release) + "Sobre", sem Red Hat.
+install -d %{buildroot}%{_sysconfdir}/cockpit
+install -m 0644 cockpit/overrides/shell.override.json \
+    %{buildroot}%{_sysconfdir}/cockpit/shell.override.json
+install -m 0644 cockpit/overrides/systemd.override.json \
+    %{buildroot}%{_sysconfdir}/cockpit/systemd.override.json
 
 # NOTA CapivaraOS: /etc/os-release e /etc/issue pertencem ao
 # fedora-release-common. Tê-los no %files causa "conflito de arquivo" no rpm
@@ -140,8 +154,19 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %{_datadir}/cockpit/branding/capivaraos-herd/logo.png
 %{_datadir}/cockpit/branding/capivaraos-herd/apple-touch-icon.png
 %{_datadir}/cockpit/branding/capivaraos-herd/favicon.ico
+%config(noreplace) %{_sysconfdir}/cockpit/shell.override.json
+%config(noreplace) %{_sysconfdir}/cockpit/systemd.override.json
 
 %changelog
+* Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-7.herd
+- Corrige o corte da logo no badge do Cockpit: a logo branca era redimensionada
+  só pela largura e ficava mais alta que o tile, cortando em cima/embaixo. Agora
+  limita largura E altura (cabe inteira); tile ajustado (640x360, 2x).
+- Remove do menu Ajuda do Cockpit os links que iam para docs.redhat.com
+  (shell "Web Console" e systemd "Configurando/Managing/Reviewing"): overrides
+  /etc/cockpit/{shell,systemd}.override.json zeram os "docs" desses manifests.
+  Sobra o link de docs do CapivaraOS (via DOCUMENTATION_URL do os-release).
+
 * Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
 - Corrige o título do menu de boot (GRUB/BLS) também no caminho osbuild/qcow2,
   que ficava "Fedora Linux ... Cloud Edition": a correção dos títulos vira um
