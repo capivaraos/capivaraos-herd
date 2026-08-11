@@ -1,9 +1,9 @@
 # capivaraos-herd-branding — identidade do CapivaraOS HERD (servidor headless)
 #
 # Diferente do branding dos desktops (wallpapers, SDDM, tema Plasma), o HERD é
-# headless: aqui o branding é textual — /etc/os-release, /etc/issue e a
-# mensagem do dia (/etc/motd.d/). Assets gráficos (logo de console) podem
-# entrar depois via PROD-36.
+# headless: o branding é textual (/etc/os-release, /etc/issue, motd) + o console
+# web (Cockpit). Também corrige os títulos do menu de boot (GRUB/BLS) para a
+# marca CapivaraOS via um script único (PROD-66/PROD-67).
 
 Name:           capivaraos-herd-branding
 Version:        1.0.0
@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        5%{?dist}.herd
+Release:        6%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
 License:        CC-BY-SA-4.0
@@ -38,16 +38,23 @@ servidor headless com base Fedora 44.
 %setup -q
 
 %build
-# ── Arte do branding do Cockpit ─────────────────────────────────────────────
-# Badge do login: logo horizontal, marrom p/ tema claro e branca p/ tema escuro
-# (modelo RHEL/CentOS). Renderizada em 2x (450x160) para telas hidpi; o CSS usa
-# background-size: contain na caixa de 225x80.
+# ── Arte do branding do Cockpit (identidade VERDE, cor do site) ─────────────
+# Badge do login: tile verde arredondado (verde-escuro #163d1e) com a logo
+# BRANCA da capivara centralizada — "logo com fundo verde", que lê bem tanto na
+# página de login (fundo verde #2f7a3d) quanto no shell interno (fundo claro).
+# Um único asset serve aos dois temas (claro/escuro), sem precisar de logo-dark.
+# Renderizado em 2x (450x180) p/ hidpi; o CSS usa background-size: contain.
 cd cockpit
-convert src/capivaraos-logo-marrom.png -resize 450x160 logo.png
-convert src/capivaraos-logo-branca.png -resize 450x160 logo-dark.png
-# Ícones (cabeça da capivara), quadrados: aba do navegador e atalho iOS.
-convert src/capivaraos-cabeca-marrom.png -resize 180x180 apple-touch-icon.png
-convert src/capivaraos-cabeca-marrom.png -define icon:auto-resize=16,32,48 favicon.ico
+convert -size 450x180 xc:none \
+    -fill '#163d1e' -draw 'roundrectangle 0,0,449,179,28,28' \
+    \( src/capivaraos-logo-branca.png -resize 380x \) -gravity center -composite \
+    logo.png
+# Ícones (cabeça branca sobre tile verde), quadrados: aba do navegador e iOS.
+convert -size 180x180 xc:none \
+    -fill '#163d1e' -draw 'roundrectangle 0,0,179,179,32,32' \
+    \( src/capivaraos-cabeca-branca.png -resize 132x \) -gravity center -composite \
+    apple-touch-icon.png
+convert apple-touch-icon.png -define icon:auto-resize=16,32,48 favicon.ico
 cd -
 
 %install
@@ -56,6 +63,9 @@ cd -
 install -d %{buildroot}%{_datadir}/capivaraos-herd
 install -m 0644 os-release %{buildroot}%{_datadir}/capivaraos-herd/os-release
 install -m 0644 issue      %{buildroot}%{_datadir}/capivaraos-herd/issue
+# Script único de correção dos títulos BLS do GRUB (chamado pelos scriptlets e
+# pelo %post do kickstart — ver comentários no %posttrans/%transfiletriggerin).
+install -m 0755 fix-bls-titles.sh %{buildroot}%{_datadir}/capivaraos-herd/fix-bls-titles.sh
 # motd.d/capivaraos-herd é um arquivo NOVO (ninguém mais o possui) — pode ir
 # normalmente no %files.
 install -D -m 0644 motd    %{buildroot}%{_sysconfdir}/motd.d/capivaraos-herd
@@ -64,7 +74,7 @@ install -D -m 0644 motd    %{buildroot}%{_sysconfdir}/motd.d/capivaraos-herd
 # Diretório escolhido pelo Cockpit via ID=capivaraos-herd do /etc/os-release.
 # Só possuímos o NOSSO subdiretório (o /usr/share/cockpit/branding é do cockpit).
 install -d %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd
-install -m 0644 cockpit/branding.css cockpit/logo.png cockpit/logo-dark.png \
+install -m 0644 cockpit/branding.css cockpit/logo.png \
     cockpit/apple-touch-icon.png cockpit/favicon.ico \
     %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd/
 
@@ -78,6 +88,11 @@ install -m 0644 cockpit/branding.css cockpit/logo.png cockpit/logo-dark.png \
 # Grava nossa identidade sobre a do Fedora (fim da transação).
 cp -f %{_datadir}/capivaraos-herd/os-release %{_sysconfdir}/os-release
 cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
+# Corrige os títulos do menu de boot (GRUB/BLS). No caminho osbuild (qcow2) o
+# kernel-install já criou as entradas com a marca Fedora ANTES deste %posttrans;
+# como não há kickstart nesse caminho, é AQUI que a correção precisa acontecer.
+# O os-release acima já é o nosso, então o script deriva o título certo.
+sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 
 # ── Reaplica os-release/issue após qualquer atualização futura do sistema ───
 # Como /etc/os-release continua pertencendo ao Fedora no rpmdb, um "dnf update"
@@ -108,37 +123,35 @@ for kver in $(ls /lib/modules 2>/dev/null); do
     [ -f "/lib/modules/${kver}/vmlinuz" ] && \
         kernel-install add "${kver}" "/lib/modules/${kver}/vmlinuz" >/dev/null 2>&1 || true
 done
-# A entrada de RESCUE é gerada uma única vez por um plugin próprio e não é
-# regravada pelo kernel-install acima; seu título fica com a marca antiga
-# ("Fedora Linux ..."). Corrigimos só a linha 'title' (não toca kernel/initramfs),
-# preservando o token "0-rescue-<id>", derivando o nome do nosso os-release.
-if [ -r %{_sysconfdir}/os-release ]; then
-    ( . %{_sysconfdir}/os-release
-      for e in /boot/loader/entries/*rescue*.conf; do
-          [ -f "$e" ] || continue
-          grep -q "^title ${NAME} " "$e" && continue
-          rid="$(sed -n 's/^title .*(\(0-rescue-[^)]*\)).*/\1/p' "$e")"
-          if [ -n "$rid" ]; then
-              sed -i "s|^title .*|title ${NAME} (${rid}) ${VERSION}|" "$e"
-          else
-              sed -i "s|^title .*|title ${NAME} (rescue) ${VERSION}|" "$e"
-          fi
-      done ) 2>/dev/null || true
-fi
+# Corrige o título de TODAS as entradas (normais + rescue) para a nossa marca.
+# O kernel-install acima não reescreve entradas já existentes; o script força o
+# título a partir do /etc/os-release (já corrigido acima). Fonte única com o
+# %posttrans e o %post do kickstart.
+sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 
 %files
 %dir %{_datadir}/capivaraos-herd
 %{_datadir}/capivaraos-herd/os-release
 %{_datadir}/capivaraos-herd/issue
+%{_datadir}/capivaraos-herd/fix-bls-titles.sh
 %{_sysconfdir}/motd.d/capivaraos-herd
 %dir %{_datadir}/cockpit/branding/capivaraos-herd
 %{_datadir}/cockpit/branding/capivaraos-herd/branding.css
 %{_datadir}/cockpit/branding/capivaraos-herd/logo.png
-%{_datadir}/cockpit/branding/capivaraos-herd/logo-dark.png
 %{_datadir}/cockpit/branding/capivaraos-herd/apple-touch-icon.png
 %{_datadir}/cockpit/branding/capivaraos-herd/favicon.ico
 
 %changelog
+* Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
+- Corrige o título do menu de boot (GRUB/BLS) também no caminho osbuild/qcow2,
+  que ficava "Fedora Linux ... Cloud Edition": a correção dos títulos vira um
+  script único (fix-bls-titles.sh) chamado pelo %posttrans (qcow2), pelo
+  %transfiletriggerin (updates) e pelo %post do kickstart (ISO). Reescreve
+  normais + rescue, preservando o token do kernel/rescue; idempotente.
+- Cockpit passa a IDENTIDADE VERDE (cor do site): fundo de login verde #2f7a3d,
+  badge com tile verde-escuro #163d1e e a logo BRANCA da capivara, accent do
+  host verde. Um único logo.png serve claro/escuro (dispensa logo-dark.png);
+  favicon/apple-touch viram a cabeça branca sobre tile verde.
 * Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-5.herd
 - Adiciona branding visual do Cockpit (console web): instala
   /usr/share/cockpit/branding/capivaraos-herd/ (escolhido pelo ID do os-release)

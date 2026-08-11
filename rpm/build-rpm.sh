@@ -28,9 +28,10 @@ VERSION="$(rpmspec -q --qf '%{version}\n' "${SCRIPT_DIR}/${NAME}.spec" 2>/dev/nu
 WORKDIR="$(mktemp -d)"
 SRCDIR="${WORKDIR}/${NAME}-${VERSION}"
 mkdir -p "$SRCDIR"
-cp "${PROJECT_DIR}/branding/os-release" "$SRCDIR/"
-cp "${PROJECT_DIR}/branding/issue"      "$SRCDIR/"
-cp "${PROJECT_DIR}/branding/motd"       "$SRCDIR/"
+cp "${PROJECT_DIR}/branding/os-release"        "$SRCDIR/"
+cp "${PROJECT_DIR}/branding/issue"             "$SRCDIR/"
+cp "${PROJECT_DIR}/branding/motd"              "$SRCDIR/"
+cp "${PROJECT_DIR}/branding/fix-bls-titles.sh" "$SRCDIR/"
 # Branding do Cockpit (console web): CSS + arte de origem (gerada no %build).
 cp -r "${PROJECT_DIR}/branding/cockpit" "$SRCDIR/"
 

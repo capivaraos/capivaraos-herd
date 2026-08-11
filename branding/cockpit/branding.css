@@ -1,29 +1,37 @@
 /* SPDX-License-Identifier: CC-BY-SA-4.0 */
-/* Branding do Cockpit (console web) do CapivaraOS HERD — PROD-36.
+/* Branding do Cockpit (console web) do CapivaraOS HERD — PROD-67.
+ *
+ * Identidade VERDE (cor do site capivaraos.org): --color-green #2f7a3d,
+ * --color-green-dark #1d4f27, --color-green-darker #163d1e.
  *
  * O Cockpit escolhe este diretório pelo ID do /etc/os-release (capivaraos-herd);
  * se ausente, cairia para a cadeia ID_LIKE ("fedora rhel") e depois "default".
  * ${VAR} são substituídos em runtime a partir do /etc/os-release, e o conteúdo
- * de #brand é injetado como HTML (por isso <b> funciona). Modelado no branding
- * do RHEL/CentOS: logo clara para o tema claro e logo-dark para o tema escuro. */
+ * de #brand é injetado como HTML (por isso <b> funciona). Este CSS é carregado
+ * tanto na tela de login quanto no shell interno. */
 
 :root {
-    /* Cor de destaque do cabeçalho do host = marrom da marca. */
-    --ct-color-host-accent: #6B4F36 !important;
+    /* Cor de destaque do host (barra do shell interno) = verde da marca. */
+    --ct-color-host-accent: #2f7a3d !important;
 }
 
+/* ── Tela de login ──────────────────────────────────────────────────────── */
+/* Fundo verde da marca por trás do cartão branco de login. */
+body.login-pf {
+    background: #2f7a3d !important;
+    background-image: none !important;
+}
+
+/* Badge: nosso logo (tile verde-escuro + capivara branca), gerado no %build. */
 #badge {
-    inline-size: 225px;
-    block-size: 80px;
+    inline-size: 260px;
+    block-size: 104px;
     background-image: url("logo.png");
     background-size: contain;
     background-repeat: no-repeat;
 }
 
-.pf-v6-theme-dark #badge {
-    background-image: url("logo-dark.png");
-}
-
+/* Título dentro do cartão: "CapivaraOS HERD <versão>". */
 #brand::before {
     content: "${NAME} <b>${VERSION_ID}</b>";
 }

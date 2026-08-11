@@ -72,21 +72,7 @@ chmod 0600 /etc/ssh/sshd_config.d/50-capivaraos-herd.conf
 # do nosso branding, e o Anaconda ainda regenera o bootloader como passo final —
 # por isso o %transfiletriggerin do RPM não pega aqui. O %post roda por ÚLTIMO
 # (após o Anaconda configurar o bootloader), então a correção não é sobrescrita.
+# Usamos o MESMO script do RPM de branding (fonte única — normais + rescue);
 # /etc/os-release já é o nosso (branding instalado no payload).
-. /etc/os-release 2>/dev/null || true
-# Regenera o título das entradas normais a partir do os-release (= CapivaraOS).
-for kver in $(ls /lib/modules 2>/dev/null); do
-    [ -f "/lib/modules/${kver}/vmlinuz" ] && \
-        kernel-install add "${kver}" "/lib/modules/${kver}/vmlinuz" >/dev/null 2>&1 || true
-done
-# Rescue: entrada gerada uma vez por plugin próprio; corrige só a linha 'title'.
-for e in /boot/loader/entries/*rescue*.conf; do
-    [ -f "$e" ] || continue
-    rid="$(sed -n 's/^title .*(\(0-rescue-[^)]*\)).*/\1/p' "$e")"
-    if [ -n "$rid" ]; then
-        sed -i "s|^title .*|title ${NAME} (${rid}) ${VERSION}|" "$e"
-    else
-        sed -i "s|^title .*|title ${NAME} (rescue) ${VERSION}|" "$e"
-    fi
-done
+sh /usr/share/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %end
