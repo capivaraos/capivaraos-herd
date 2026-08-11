@@ -41,6 +41,7 @@ bootloader --location=mbr
 @core
 kernel
 capivaraos-herd-branding
+capivaraos-herd-hardening
 cloud-init
 qemu-guest-agent
 openssh-server
@@ -51,22 +52,9 @@ glibc-langpack-pt
 glibc-langpack-en
 %end
 
-# ── Hardening SSH — espelha o drop-in da blueprint (customizations.files) ────
-# TODO(PROD-41): mover para dentro do capivaraos-herd-branding (fonte única).
+# O hardening (SSH, senha, umask, compliance) vem do pacote
+# capivaraos-herd-hardening no %packages — fonte única, não replicar aqui.
 %post
-install -d -m 0755 /etc/ssh/sshd_config.d
-cat > /etc/ssh/sshd_config.d/50-capivaraos-herd.conf <<'EOF'
-# CapivaraOS HERD — baseline de hardening SSH (ver PROD-41)
-PermitRootLogin no
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-X11Forwarding no
-MaxAuthTries 3
-LoginGraceTime 30
-AllowAgentForwarding no
-EOF
-chmod 0600 /etc/ssh/sshd_config.d/50-capivaraos-herd.conf
-
 # ── Corrige os títulos do GRUB (senão ficam "Fedora Linux") ──────────────────
 # O kernel-install do Anaconda gera as entradas BLS a partir do os-release ANTES
 # do nosso branding, e o Anaconda ainda regenera o bootloader como passo final —

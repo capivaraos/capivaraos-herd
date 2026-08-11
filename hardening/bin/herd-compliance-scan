@@ -1,0 +1,56 @@
+#!/bin/sh
+# =============================================================================
+# herd-compliance-scan — relatório de compliance OpenSCAP do CapivaraOS HERD.
+# =============================================================================
+# Avalia o sistema contra um perfil do SCAP Security Guide (SSG) do Fedora e
+# gera um relatório HTML legível + os resultados XML. Community: perfil
+# "standard" (padrão). O perfil CIS completo é diferencial do Enterprise (fase 2).
+#
+# Uso:
+#   sudo herd-compliance-scan                 # perfil 'standard'
+#   sudo herd-compliance-scan <profile_id>    # outro perfil do SSG
+#   herd-compliance-scan --list               # lista os perfis disponíveis
+#
+# oscap sai com código 2 quando há regras que FALHARAM (é resultado, não erro de
+# execução) — por isso não abortamos nesse caso.
+# =============================================================================
+set -eu
+
+# Prefere o datastream do scap-security-guide completo (se o admin o instalou —
+# mais perfis/atualizado); senão usa o ssg-fedora-ds.xml vendorado pelo pacote.
+DS_STD=/usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml
+DS_VENDORED=/usr/share/capivaraos-herd-hardening/ssg-fedora-ds.xml
+DEFAULT_PROFILE=xccdf_org.ssgproject.content_profile_standard
+
+if [ -r "$DS_STD" ]; then
+    DS="$DS_STD"
+elif [ -r "$DS_VENDORED" ]; then
+    DS="$DS_VENDORED"
+else
+    echo "erro: datastream SCAP não encontrado." >&2
+    echo "       Instale: dnf install scap-security-guide" >&2
+    exit 1
+fi
+
+if [ "${1:-}" = "--list" ] || [ "${1:-}" = "-l" ]; then
+    oscap info "$DS" | grep -i 'profile' || true
+    exit 0
+fi
+
+[ "$(id -u)" -eq 0 ] || { echo "erro: rode como root (sudo herd-compliance-scan)." >&2; exit 1; }
+
+PROFILE="${1:-$DEFAULT_PROFILE}"
+TS="$(date +%Y%m%d-%H%M%S)"
+REPORT="/root/herd-compliance-${TS}.html"
+RESULTS="/root/herd-compliance-${TS}.xml"
+
+echo "==> CapivaraOS HERD — avaliação de compliance"
+echo "    perfil:    ${PROFILE}"
+echo "    datastream:${DS}"
+echo
+oscap xccdf eval --profile "$PROFILE" \
+    --results "$RESULTS" --report "$REPORT" "$DS" || true
+
+echo
+echo "==> Relatório HTML: ${REPORT}"
+echo "==> Resultados XML: ${RESULTS}"

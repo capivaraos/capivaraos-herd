@@ -15,11 +15,11 @@
 #
 # PRÉ-REQUISITOS (precisa root — lorax/dnf):
 #   sudo dnf install -y lorax createrepo_c
-#   O RPM de branding (capivaraos-herd-branding) E o de logos
-#   (capivaraos-herd-logos) já construídos e servidos no repo local:
-#       ./rpm/build-rpm.sh && ./rpm/build-rpm-logos.sh
+#   Os RPMs de branding, hardening E logos já construídos e servidos no repo:
+#       ./rpm/build-rpm.sh && ./rpm/build-rpm-hardening.sh && ./rpm/build-rpm-logos.sh
 #       mkdir -p /var/tmp/capivaraos-herd-repo
 #       cp ~/rpmbuild/RPMS/noarch/capivaraos-herd-branding-*.rpm \
+#          ~/rpmbuild/RPMS/noarch/capivaraos-herd-hardening-*.rpm \
 #          ~/rpmbuild/RPMS/noarch/capivaraos-herd-logos-*.rpm \
 #          /var/tmp/capivaraos-herd-repo/
 #       createrepo_c /var/tmp/capivaraos-herd-repo
@@ -47,7 +47,8 @@ ISO_OUT="$OUT/CapivaraOS-HERD-${VERSION}-${ARCH}.installer.iso"
 # em sincronia: este é o que baixamos pro repo offline; o kickstart é o que o
 # Anaconda instala a partir dele.
 PAYLOAD_PKGS=(
-    kernel capivaraos-herd-branding cloud-init qemu-guest-agent openssh-server
+    kernel capivaraos-herd-branding capivaraos-herd-hardening
+    cloud-init qemu-guest-agent openssh-server
     firewalld chrony cockpit glibc-langpack-pt glibc-langpack-en
 )
 
@@ -60,7 +61,7 @@ OSVER="$(. /etc/os-release && echo "${VERSION_ID:-?}")"
 for t in lorax mkksiso createrepo_c dnf; do
     command -v "$t" >/dev/null || { echo "ERRO: '$t' não encontrado (dnf install lorax createrepo_c)." >&2; exit 1; }
 done
-for rpm in capivaraos-herd-branding capivaraos-herd-logos; do
+for rpm in capivaraos-herd-branding capivaraos-herd-hardening capivaraos-herd-logos; do
     ls "$BRANDING_REPO/${rpm}"-*.rpm >/dev/null 2>&1 || {
         echo "ERRO: ${rpm} não está em ${BRANDING_REPO}. Rode os build-rpm e o createrepo_c (ver cabeçalho)." >&2
         exit 1
@@ -159,8 +160,11 @@ dnf -y --releasever="$RELEASEVER" \
     "${PAYLOAD_PKGS[@]}"
 # Colhe os RPMs baixados do cache.
 find "$DNFCACHE" -name '*.rpm' -exec cp -n {} "$WORK/repo/" \;
-# Pacotes file:// (nosso branding) podem não ir ao cache; copia direto.
-cp -n "$BRANDING_REPO"/capivaraos-herd-branding-*.rpm "$WORK/repo/" 2>/dev/null || true
+# Pacotes file:// (nossos RPMs) podem não ir ao cache; copia direto. NÃO inclui
+# o capivaraos-herd-logos (é só do instalador/lorax; Provides fedora-logos e não
+# deve entrar no repo do sistema instalado).
+cp -n "$BRANDING_REPO"/capivaraos-herd-branding-*.rpm \
+      "$BRANDING_REPO"/capivaraos-herd-hardening-*.rpm "$WORK/repo/" 2>/dev/null || true
 # comps (grupos) para o @core do kickstart resolver no Anaconda.
 COMPS_ZST="$(find /var/cache/libdnf5 -path '*fedora*' -name '*comps-Everything*.xml.zst' 2>/dev/null | head -1)"
 if [ -n "$COMPS_ZST" ]; then
