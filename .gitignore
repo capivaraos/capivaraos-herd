@@ -3,3 +3,9 @@
 *.iso
 *.img
 *.log
+
+# Artefatos do lorax quando rodado com logdir na raiz do repo (build-iso.sh)
+/debugdata/
+/pkglists/
+/lorax.conf
+/*-pkgsizes.txt

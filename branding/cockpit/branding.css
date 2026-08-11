@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: CC-BY-SA-4.0 */
+/* Branding do Cockpit (console web) do CapivaraOS HERD — PROD-36.
+ *
+ * O Cockpit escolhe este diretório pelo ID do /etc/os-release (capivaraos-herd);
+ * se ausente, cairia para a cadeia ID_LIKE ("fedora rhel") e depois "default".
+ * ${VAR} são substituídos em runtime a partir do /etc/os-release, e o conteúdo
+ * de #brand é injetado como HTML (por isso <b> funciona). Modelado no branding
+ * do RHEL/CentOS: logo clara para o tema claro e logo-dark para o tema escuro. */
+
+:root {
+    /* Cor de destaque do cabeçalho do host = marrom da marca. */
+    --ct-color-host-accent: #6B4F36 !important;
+}
+
+#badge {
+    inline-size: 225px;
+    block-size: 80px;
+    background-image: url("logo.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.pf-v6-theme-dark #badge {
+    background-image: url("logo-dark.png");
+}
+
+#brand::before {
+    content: "${NAME} <b>${VERSION_ID}</b>";
+}

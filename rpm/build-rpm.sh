@@ -31,6 +31,8 @@ mkdir -p "$SRCDIR"
 cp "${PROJECT_DIR}/branding/os-release" "$SRCDIR/"
 cp "${PROJECT_DIR}/branding/issue"      "$SRCDIR/"
 cp "${PROJECT_DIR}/branding/motd"       "$SRCDIR/"
+# Branding do Cockpit (console web): CSS + arte de origem (gerada no %build).
+cp -r "${PROJECT_DIR}/branding/cockpit" "$SRCDIR/"
 
 mkdir -p "$HOME/rpmbuild/SOURCES" "$HOME/rpmbuild/SPECS"
 # Remove um tarball homônimo de build anterior antes de gravar o novo.
