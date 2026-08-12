@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        7%{?dist}.herd
+Release:        8%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
 # Código (os-release/issue/motd, script BLS) sob GPLv3; a arte de logo do Cockpit
@@ -88,11 +88,10 @@ install -m 0644 cockpit/branding.css cockpit/logo.png \
 # (mecanismo oficial e estável do Cockpit: /etc/cockpit/<pacote>.override.json,
 # mesclado sobre o manifest.json do pacote). Assim o menu fica com o nosso link
 # de docs (derivado do DOCUMENTATION_URL do os-release) + "Sobre", sem Red Hat.
+# Cobre os 5 pacotes que trazem links docs.redhat.com: shell, systemd, users,
+# networkmanager e storaged. Instala via glob p/ pegar qualquer override novo.
 install -d %{buildroot}%{_sysconfdir}/cockpit
-install -m 0644 cockpit/overrides/shell.override.json \
-    %{buildroot}%{_sysconfdir}/cockpit/shell.override.json
-install -m 0644 cockpit/overrides/systemd.override.json \
-    %{buildroot}%{_sysconfdir}/cockpit/systemd.override.json
+install -m 0644 cockpit/overrides/*.override.json %{buildroot}%{_sysconfdir}/cockpit/
 
 # NOTA CapivaraOS: /etc/os-release e /etc/issue pertencem ao
 # fedora-release-common. Tê-los no %files causa "conflito de arquivo" no rpm
@@ -156,10 +155,17 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %{_datadir}/cockpit/branding/capivaraos-herd/logo.png
 %{_datadir}/cockpit/branding/capivaraos-herd/apple-touch-icon.png
 %{_datadir}/cockpit/branding/capivaraos-herd/favicon.ico
-%config(noreplace) %{_sysconfdir}/cockpit/shell.override.json
-%config(noreplace) %{_sysconfdir}/cockpit/systemd.override.json
+%config(noreplace) %{_sysconfdir}/cockpit/*.override.json
 
 %changelog
+* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-8.herd
+- Cockpit: cobre TODOS os pacotes que traziam links docs.redhat.com no menu
+  Ajuda. Além de shell e systemd, adiciona overrides para users, networkmanager
+  e storaged (a página de Contas ainda mostrava "Managing user accounts" → Red
+  Hat). Instalação por glob de /etc/cockpit/*.override.json (pega overrides
+  futuros). Também reclassifica License (código GPLv3, arte = trademark do
+  projeto — ver TRADEMARK.md), resolvendo o CC-BY-SA-4.0 anterior.
+
 * Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-7.herd
 - Corrige o corte da logo no badge do Cockpit: a logo branca era redimensionada
   só pela largura e ficava mais alta que o tile, cortando em cima/embaixo. Agora
