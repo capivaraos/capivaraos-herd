@@ -19,7 +19,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        2%{?dist}.herd
+Release:        3%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # CC-BY-SA-4.0 = nossa config; BSD-3-Clause = o datastream SSG vendorado abaixo.
@@ -77,9 +77,12 @@ if [ -f %{_sysconfdir}/dnf/dnf.conf ] && ! grep -q '^gpgcheck' %{_sysconfdir}/dn
     sed -i '/^\[main\]/a gpgcheck=1' %{_sysconfdir}/dnf/dnf.conf
 fi
 # Idade de senha no login.defs (regras accounts_{maximum,minimum}_age_login_defs).
+# Valores = os que o perfil 'standard' do SSG exige (o mesmo que o
+# herd-compliance-scan roda por padrão): a imagem passa no próprio perfil.
+# MAX 90 (rotação trimestral), MIN 7 (evita troca em ciclo p/ burlar histórico).
 if [ -f %{_sysconfdir}/login.defs ]; then
-    sed -ri 's/^(PASS_MAX_DAYS)[[:space:]]+.*/\1\t365/' %{_sysconfdir}/login.defs
-    sed -ri 's/^(PASS_MIN_DAYS)[[:space:]]+.*/\1\t1/'   %{_sysconfdir}/login.defs
+    sed -ri 's/^(PASS_MAX_DAYS)[[:space:]]+.*/\1\t90/' %{_sysconfdir}/login.defs
+    sed -ri 's/^(PASS_MIN_DAYS)[[:space:]]+.*/\1\t7/'  %{_sysconfdir}/login.defs
 fi
 
 %files
@@ -90,6 +93,12 @@ fi
 %{_datadir}/%{name}/ssg-fedora-ds.xml
 
 %changelog
+* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
+- Alinha a idade de senha aos valores do perfil 'standard' do SSG (o mesmo que
+  o herd-compliance-scan roda por padrão), pra imagem passar no próprio perfil:
+  PASS_MAX_DAYS 90 (era 365) e PASS_MIN_DAYS 7 (era 1). Fecha as regras
+  accounts_{maximum,minimum}_age_login_defs, que falhavam com 365/1.
+
 * Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
 - Ganhos rápidos de compliance no 1.0.0 (PROD-70): PermitEmptyPasswords no no
   drop-in SSH; gpgcheck=1 explícito no [main] do dnf.conf; PASS_MAX_DAYS 365 /
