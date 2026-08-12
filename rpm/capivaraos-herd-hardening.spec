@@ -19,7 +19,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # CC-BY-SA-4.0 = nossa config; BSD-3-Clause = o datastream SSG vendorado abaixo.
@@ -66,6 +66,22 @@ install -D -m 0755 bin/herd-compliance-scan \
 install -D -m 0644 scap/ssg-fedora-ds.xml \
     %{buildroot}%{_datadir}/%{name}/ssg-fedora-ds.xml
 
+# Alguns ajustes de compliance vivem em arquivos de OUTROS pacotes que NÃO têm
+# drop-in (.d): /etc/login.defs (shadow-utils) e /etc/dnf/dnf.conf (dnf). Editamos
+# em %posttrans (fim da transação, arquivos já presentes do @core), de forma
+# IDEMPOTENTE. Ambos são %config(noreplace) dos donos → nossa edição persiste em
+# updates futuros. (SSH/pwquality/umask seguem como drop-ins próprios acima.)
+%posttrans
+# gpgcheck=1 explícito no [main] do dnf.conf (regra SSG ensure_gpgcheck_globally_activated).
+if [ -f %{_sysconfdir}/dnf/dnf.conf ] && ! grep -q '^gpgcheck' %{_sysconfdir}/dnf/dnf.conf; then
+    sed -i '/^\[main\]/a gpgcheck=1' %{_sysconfdir}/dnf/dnf.conf
+fi
+# Idade de senha no login.defs (regras accounts_{maximum,minimum}_age_login_defs).
+if [ -f %{_sysconfdir}/login.defs ]; then
+    sed -ri 's/^(PASS_MAX_DAYS)[[:space:]]+.*/\1\t365/' %{_sysconfdir}/login.defs
+    sed -ri 's/^(PASS_MIN_DAYS)[[:space:]]+.*/\1\t1/'   %{_sysconfdir}/login.defs
+fi
+
 %files
 %config(noreplace) %{_sysconfdir}/ssh/sshd_config.d/50-capivaraos-herd.conf
 %config(noreplace) %{_sysconfdir}/security/pwquality.conf.d/50-capivaraos-herd.conf
@@ -74,6 +90,12 @@ install -D -m 0644 scap/ssg-fedora-ds.xml \
 %{_datadir}/%{name}/ssg-fedora-ds.xml
 
 %changelog
+* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
+- Ganhos rápidos de compliance no 1.0.0 (PROD-70): PermitEmptyPasswords no no
+  drop-in SSH; gpgcheck=1 explícito no [main] do dnf.conf; PASS_MAX_DAYS 365 /
+  PASS_MIN_DAYS 1 no login.defs (via %posttrans idempotente — arquivos sem .d).
+  nullok/pam_lastlog/securetty/auditd ficam para passes futuros/Enterprise.
+
 * Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de hardening do HERD Community (PROD-41): SSH endurecido
   (movido do blueprint/kickstart para cá — fonte única), política de senha
