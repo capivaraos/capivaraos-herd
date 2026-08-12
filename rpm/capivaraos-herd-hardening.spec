@@ -22,8 +22,8 @@ Version:        1.0.0
 Release:        3%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
-# CC-BY-SA-4.0 = nossa config; BSD-3-Clause = o datastream SSG vendorado abaixo.
-License:        CC-BY-SA-4.0 AND BSD-3-Clause
+# GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
+License:        GPL-3.0-or-later AND BSD-3-Clause
 URL:            https://capivaraos.org
 BuildArch:      noarch
 

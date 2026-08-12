@@ -16,7 +16,8 @@ Version:        1.0.0
 Release:        3%{?dist}.herd
 Summary:        Identidade do instalador (Anaconda) do CapivaraOS HERD
 
-License:        CC-BY-SA-4.0
+# Logotipo = marca registrada do projeto (ver TRADEMARK.md), não licença aberta.
+License:        LicenseRef-CapivaraOS-Trademark
 URL:            https://capivaraos.org
 BuildArch:      noarch
 

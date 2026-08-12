@@ -14,7 +14,9 @@ Version:        1.0.0
 Release:        7%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
-License:        CC-BY-SA-4.0
+# Código (os-release/issue/motd, script BLS) sob GPLv3; a arte de logo do Cockpit
+# é marca registrada do projeto (ver TRADEMARK.md).
+License:        GPL-3.0-or-later AND LicenseRef-CapivaraOS-Trademark
 URL:            https://capivaraos.org
 BuildArch:      noarch
 

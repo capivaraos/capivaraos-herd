@@ -93,8 +93,22 @@ Detalhes e finalização de hardening: **PROD-41**.
 ## Estrutura
 
 ```
-blueprints/capivaraos-herd.toml   # fonte de verdade do build
+blueprints/capivaraos-herd.toml   # fonte de verdade do build (osbuild)
 build.sh                          # pipeline osbuild (qcow2 + ISO)
-rpm/                              # RPM de branding (os-release, issue, motd)
-branding/                        # assets textuais do branding
+build-iso.sh                      # ISO instaladora brandeada (lorax) — PROD-66
+kickstart/capivaraos-herd.ks      # perfil de servidor (ISO/Anaconda)
+rpm/                              # specs: branding, logos (instalador), hardening
+branding/                         # os-release/issue/motd, arte do Cockpit, fix BLS
+hardening/                        # SSH/senha/umask + herd-compliance-scan (PROD-41)
 ```
+
+## Licença e marca
+
+- **Código** (scripts de build, kickstart, specs, configs): **GPLv3** — ver
+  [LICENSE](LICENSE).
+- **Nome e logotipo** "CapivaraOS" / "HERD": **marca protegida**, todos os
+  direitos reservados — ver [TRADEMARK.md](TRADEMARK.md). Você pode usar e
+  redistribuir o software; para redistribuir versões **modificadas**, remova a
+  identidade visual (logo, nome, `os-release`).
+- Conteúdo de terceiros embarcado mantém sua licença de origem (ex.:
+  `hardening/scap/ssg-fedora-ds.xml` sob BSD-3-Clause).
