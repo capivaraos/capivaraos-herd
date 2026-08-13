@@ -30,7 +30,7 @@ selinux --enforcing
 services --enabled=sshd,chronyd,firewalld,cloud-init.target,cockpit.socket
 
 # ── Bootloader ──────────────────────────────────────────────────────────────
-bootloader --location=mbr
+bootloader --location=mbr --append="audit_backlog_limit=8192"
 
 # DISCO: interativo — sem clearpart/part/autopart, o admin escolhe o destino.
 # USUÁRIO/ROOT: interativo — sem rootpw/user, o admin cria na instalação.

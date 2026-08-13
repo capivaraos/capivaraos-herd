@@ -21,7 +21,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        4%{?dist}.herd
+Release:        5%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -112,6 +112,20 @@ if [ -f "$AC" ]; then
         fi
     done
 fi
+# Regras de auditoria para binários privilegiados (setuid/setgid) — GERADAS aqui,
+# não estáticas: o conjunto de binários varia por imagem/instalação, e uma regra
+# "-a ... -F path=<binário ausente>" faz o augenrules ABORTAR o load antes do -e 2
+# (deixando a auditoria mutável, enabled 1). Visto no install via ISO (mínimo, sem
+# polkit-agent-helper-1). Gerar da lista real de setuid/setgid garante que todo
+# path existe e o -e 2 (imutável) aplica em qualquer imagem.
+PRIV=%{_sysconfdir}/audit/rules.d/privileged.rules
+{
+    echo "## Gerado por capivaraos-herd-hardening (%posttrans): binários setuid/setgid presentes."
+    find / -xdev -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null | sort -u | while read -r f; do
+        printf -- '-a always,exit -F path=%s -F perm=x -F auid>=1000 -F auid!=unset -F key=privileged\n' "$f"
+    done
+} > "$PRIV" 2>/dev/null || true
+chmod 0640 "$PRIV" 2>/dev/null || true
 # Plugin audispd->syslog (regra auditd_audispd_syslog_plugin_activated).
 SP=%{_sysconfdir}/audit/plugins.d/syslog.conf
 [ -f "$SP" ] && sed -ri 's/^([[:space:]]*active[[:space:]]*=[[:space:]]*)no/\1yes/' "$SP" || true
@@ -134,6 +148,17 @@ done
 %{_datadir}/%{name}/ssg-fedora-ds.xml
 
 %changelog
+* Thu Aug 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-5.herd
+- Corrige a auditoria no install via ISO (mínimo): a privileged.rules estática
+  trazia "-F path=" para binários ausentes (ex.: polkit-agent-helper-1), o que
+  fazia o augenrules abortar antes do "-e 2" (auditoria ficava mutável,
+  enabled 1). Agora a privileged.rules é GERADA no %posttrans a partir dos
+  setuid/setgid realmente presentes → todo path existe, o -e 2 aplica e a
+  auditoria fica imutável (enabled 2) tanto na qcow2 quanto no ISO.
+- audit_backlog_limit=8192 também no kickstart (bootloader --append), porque o
+  Anaconda regenera o bootloader depois do %posttrans (o backlog não ia pro
+  cmdline no sistema instalado via ISO). qcow2 já vinha OK pelo %posttrans.
+
 * Thu Aug 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-4.herd
 - Auditoria (auditd) endurecida: ruleset do perfil 'standard' do SSG em
   /etc/audit/rules.d/ (perm_mod, privileged, time-change, modules, logins,
