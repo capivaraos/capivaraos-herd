@@ -21,7 +21,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        5%{?dist}.herd
+Release:        6%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -146,8 +146,18 @@ done
 %{_sysconfdir}/profile.d/capivaraos-herd-umask.sh
 %{_bindir}/herd-compliance-scan
 %{_datadir}/%{name}/ssg-fedora-ds.xml
+# Licença do datastream do SCAP Security Guide vendorado (BSD-3-Clause):
+# o BSD-3 exige reproduzir copyright + condições junto do material redistribuído.
+%license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Thu Aug 14 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
+- Empacota a licença do SCAP Security Guide (BSD-3-Clause, (c) Red Hat, Inc.)
+  como %license, ao lado do datastream ssg-fedora-ds.xml vendorado. O BSD-3
+  exige reproduzir o copyright e as condições junto do material redistribuído;
+  a atribuição também consta na documentação (docs.capivaraos.org, página de
+  Segurança). Sem mudança funcional — só conformidade de licença.
+
 * Thu Aug 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-5.herd
 - Corrige a auditoria no install via ISO (mínimo): a privileged.rules estática
   trazia "-F path=" para binários ausentes (ex.: polkit-agent-helper-1), o que
