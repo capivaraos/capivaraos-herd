@@ -7,9 +7,9 @@
 #   - out/CapivaraOS-HERD-1.0.0-x86_64.installer.iso   (instalador brandeado, lorax)
 #   - out/SHA256SUMS
 #
-# Pré-requisitos JÁ feitos por esta sessão: os 3 RPMs (branding-9, hardening-3,
-# logos-3) foram construídos e o repo local /var/tmp/capivaraos-herd-repo está
-# populado + createrepo. Este script só faz a parte que precisa de root.
+# Pré-requisitos JÁ feitos antes de rodar: os 3 RPMs (branding-9, hardening-6,
+# logos-3) construídos e o repo local /var/tmp/capivaraos-herd-repo populado +
+# createrepo. Este script só faz a parte que precisa de root.
 #
 # USO (num terminal com sudo):
 #   cd /home/dp/capivaraos/capivaraos-herd && sudo ./release-build.sh
@@ -26,7 +26,7 @@ echo "########## 1/3: qcow2 (osbuild) ##########"
 ./build.sh qcow2
 
 echo "########## 2/3: ISO instaladora brandeada (lorax + repo, REBUILD forcado) ##########"
-# Forca refazer o lorax e o repo offline porque os RPMs mudaram (branding -9).
+# Forca refazer o lorax e o repo offline porque os RPMs mudaram (hardening -6).
 FORCE_LORAX=1 FORCE_REPO=1 ./build-iso.sh
 
 echo "########## limpeza: remove ISO osbuild antiga (nao e artefato de release) ##########"
