@@ -151,7 +151,7 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
-* Thu Aug 14 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
+* Fri Aug 14 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
 - Empacota a licença do SCAP Security Guide (BSD-3-Clause, (c) Red Hat, Inc.)
   como %license, ao lado do datastream ssg-fedora-ds.xml vendorado. O BSD-3
   exige reproduzir o copyright e as condições junto do material redistribuído;
@@ -182,13 +182,13 @@ done
   pam_namespace (fora do escopo do 1.0.0 Community) ou quirk de relatório do OVAL
   no Fedora (estado real endurecido, ex.: cramfs/backlog/rename já aplicados).
 
-* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
+* Wed Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
 - Alinha a idade de senha aos valores do perfil 'standard' do SSG (o mesmo que
   o herd-compliance-scan roda por padrão), pra imagem passar no próprio perfil:
   PASS_MAX_DAYS 90 (era 365) e PASS_MIN_DAYS 7 (era 1). Fecha as regras
   accounts_{maximum,minimum}_age_login_defs, que falhavam com 365/1.
 
-* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
+* Wed Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-2.herd
 - Ganhos rápidos de compliance no 1.0.0 (PROD-70): PermitEmptyPasswords no no
   drop-in SSH; gpgcheck=1 explícito no [main] do dnf.conf; PASS_MAX_DAYS 365 /
   PASS_MIN_DAYS 1 no login.defs (via %posttrans idempotente — arquivos sem .d).

@@ -158,13 +158,13 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %config(noreplace) %{_sysconfdir}/cockpit/*.override.json
 
 %changelog
-* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-9.herd
+* Wed Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-9.herd
 - Aponta a documentação para o local real: DOCUMENTATION_URL e a linha do MOTD
   passam a https://docs.capivaraos.org/pt/herd/ (antes capivaraos.org/docs/herd,
   link morto). SUPPORT_URL passa a .../pt/herd/suporte/. Os links de docs do
   os-release e do Cockpit deixam de ser mortos (docs publicados em PROD-71).
 
-* Tue Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-8.herd
+* Wed Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-8.herd
 - Cockpit: cobre TODOS os pacotes que traziam links docs.redhat.com no menu
   Ajuda. Além de shell e systemd, adiciona overrides para users, networkmanager
   e storaged (a página de Contas ainda mostrava "Managing user accounts" → Red
