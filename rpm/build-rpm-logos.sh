@@ -35,4 +35,4 @@ rpmbuild -bb "$HOME/rpmbuild/SPECS/${NAME}.spec"
 
 echo
 echo "RPM gerado em: $HOME/rpmbuild/RPMS/noarch/"
-ls -1 "$HOME/rpmbuild/RPMS/noarch/" | grep "^${NAME}"
+find "$HOME/rpmbuild/RPMS/noarch/" -maxdepth 1 -name "${NAME}*.rpm" -printf '%f\n'

@@ -1,0 +1,32 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        run: |
+          # O shellcheck ja vem pre-instalado nos runners ubuntu-latest.
+          shellcheck --version
+          mapfile -t files < <(find . -path ./.git -prune -o -path ./out -prune -o -name '*.sh' -print | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "Nenhum script .sh encontrado."
+            exit 0
+          fi
+          printf 'Analisando %d scripts:\n' "${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          # Reporta warning e error (ignora info/style por enquanto).
+          # Para endurecer depois: troque para --severity=style.
+          shellcheck --severity=warning "${files[@]}"
