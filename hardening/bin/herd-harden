@@ -1,0 +1,150 @@
+#!/bin/sh
+# =============================================================================
+# herd-harden — endurecimento em 1 comando do CapivaraOS HERD (OpenSCAP + Ansible)
+# =============================================================================
+# Aplica um perfil do SCAP Security Guide (SSG) do Fedora ao sistema, usando os
+# playbooks Ansible que o próprio oscap gera (fix-type ansible). É a contraparte
+# "aplicar" do herd-compliance-scan (que só relata).
+#
+# SEGURANÇA: por padrão roda em DRY-RUN (ansible-playbook --check --diff) e NÃO
+# altera nada. Só aplica de verdade com --apply, explícito.
+#
+# Uso:
+#   herd-harden [PERFIL]            # dry-run: mostra o que mudaria (padrão)
+#   sudo herd-harden [PERFIL] --apply   # aplica de verdade
+#   herd-harden --list             # lista os perfis disponíveis
+#   herd-harden --help
+#
+# PERFIL aceita um apelido amigável ou o id técnico completo do SSG:
+#   standard   (padrão)  -> baseline do HERD Community
+#   ospp                 -> Protection Profile (NIAP/CC) — perfil "oficial"
+#   cis-l1               -> CIS Fedora Nível 1 Servidor (rascunho SSG)
+#   cis-l2  (ou cis)     -> CIS Fedora Nível 2 Servidor (rascunho SSG)
+#   pci     (ou pci-dss) -> PCI-DSS v3.2.1
+#
+# Observação de conformidade: os perfis CIS aqui são os RASCUNHOS do SSG para
+# Fedora (o CIS não publica benchmark oficial de Fedora); não há perfil STIG
+# para Fedora (use ospp como baseline DoD-adjacente). O HERD entrega os
+# controles e a evidência — "pronto para conformidade", nunca "certificado".
+# =============================================================================
+set -eu
+
+DS_STD=/usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml
+DS_VENDORED=/usr/share/capivaraos-herd-hardening/ssg-fedora-ds.xml
+PREFIX=xccdf_org.ssgproject.content_profile_
+DEFAULT_PROFILE=standard
+
+resolve_profile() {
+    case "$1" in
+        standard)             echo "${PREFIX}standard" ;;
+        ospp)                 echo "${PREFIX}ospp" ;;
+        cis-l1|cis_server_l1) echo "${PREFIX}cis_server_l1" ;;
+        cis-l2|cis)           echo "${PREFIX}cis" ;;
+        pci|pci-dss)          echo "${PREFIX}pci-dss" ;;
+        ${PREFIX}*)           echo "$1" ;;   # id técnico completo
+        *)                    return 1 ;;
+    esac
+}
+
+usage() {
+    cat <<'EOF'
+herd-harden — endurecimento em 1 comando (OpenSCAP + Ansible) / one-command hardening
+
+  herd-harden [PERFIL]              dry-run: mostra o que mudaria (não altera nada)
+  sudo herd-harden [PERFIL] --apply aplica o perfil de verdade
+  herd-harden --list               lista os perfis do datastream
+  herd-harden --help
+
+PERFIL / PROFILE:
+  standard (padrão) · ospp · cis-l1 · cis-l2 (cis) · pci (pci-dss)
+  ou o id técnico completo (xccdf_org.ssgproject.content_profile_*)
+
+Sem --apply, roda em modo verificação (--check): seguro para inspecionar.
+Without --apply, runs in Ansible check mode: safe, changes nothing.
+EOF
+}
+
+# ---- descoberta do datastream (mesmo critério do herd-compliance-scan) -------
+if [ -r "$DS_STD" ]; then
+    DS="$DS_STD"
+elif [ -r "$DS_VENDORED" ]; then
+    DS="$DS_VENDORED"
+else
+    echo "erro: datastream SCAP não encontrado." >&2
+    echo "       Instale: dnf install scap-security-guide" >&2
+    exit 1
+fi
+
+# ---- parse de argumentos -----------------------------------------------------
+APPLY=0
+PROFILE_IN=""
+for a in "$@"; do
+    case "$a" in
+        --apply)     APPLY=1 ;;
+        --list|-l)
+            if command -v oscap >/dev/null 2>&1; then
+                oscap info "$DS" | grep -i 'profile' || true
+            else
+                echo "perfis (apelidos): standard, ospp, cis-l1, cis-l2, pci"
+            fi
+            exit 0 ;;
+        -h|--help)   usage; exit 0 ;;
+        -*)          echo "erro: opção desconhecida: $a" >&2; usage >&2; exit 2 ;;
+        *)           PROFILE_IN="$a" ;;
+    esac
+done
+[ -n "$PROFILE_IN" ] || PROFILE_IN="$DEFAULT_PROFILE"
+
+PROFILE="$(resolve_profile "$PROFILE_IN")" || {
+    echo "erro: perfil desconhecido: $PROFILE_IN" >&2
+    echo "      use --list, ou um de: standard ospp cis-l1 cis-l2 pci" >&2
+    exit 2
+}
+
+# ---- dependências ------------------------------------------------------------
+command -v oscap >/dev/null 2>&1 || {
+    echo "erro: 'oscap' não encontrado. Instale: dnf install openscap-scanner" >&2; exit 1; }
+command -v ansible-playbook >/dev/null 2>&1 || {
+    echo "erro: 'ansible-playbook' não encontrado. Instale: dnf install ansible-core" >&2; exit 1; }
+
+# Tanto o --check quanto o --apply inspecionam/alteram arquivos de sistema: root.
+[ "$(id -u)" -eq 0 ] || { echo "erro: rode como root (sudo herd-harden ...)." >&2; exit 1; }
+
+# ---- geração do playbook de remediação (on-demand, a partir do datastream) ---
+TS="$(date +%Y%m%d-%H%M%S)"
+PLAYBOOK="$(mktemp /tmp/herd-harden-XXXXXX.yml)"
+LOG="/var/log/herd-harden-${TS}.log"
+trap 'rm -f "$PLAYBOOK"' EXIT
+
+echo "==> CapivaraOS HERD — endurecimento por perfil"
+echo "    perfil:     ${PROFILE}"
+echo "    datastream: ${DS}"
+echo
+
+# oscap sai com 1 se não houver o que remediar; não é erro fatal para nós.
+oscap xccdf generate fix --fix-type ansible --profile "$PROFILE" \
+    --output "$PLAYBOOK" "$DS" || true
+if [ ! -s "$PLAYBOOK" ]; then
+    echo "erro: não foi possível gerar o playbook para o perfil '${PROFILE}'." >&2
+    exit 1
+fi
+
+# Inventário local: aplica na própria máquina, sem SSH.
+AP_ARGS="-i localhost, -c local -e ansible_python_interpreter=/usr/bin/python3"
+
+# shellcheck disable=SC2086
+if [ "$APPLY" -eq 1 ]; then
+    echo "!!  MODO --apply: as mudanças do perfil serão APLICADAS neste servidor."
+    echo "    Log: ${LOG}"
+    echo
+    ansible-playbook $AP_ARGS "$PLAYBOOK" 2>&1 | tee "$LOG"
+    echo
+    echo "==> Concluído. Rode 'sudo herd-compliance-scan ${PROFILE_IN}' para conferir o score."
+else
+    echo ">>  DRY-RUN (verificação, nada será alterado). Use --apply para aplicar."
+    echo "    Log: ${LOG}"
+    echo
+    ansible-playbook $AP_ARGS --check --diff "$PLAYBOOK" 2>&1 | tee "$LOG"
+    echo
+    echo "==> Isto foi um dry-run. Para aplicar: sudo herd-harden ${PROFILE_IN} --apply"
+fi

@@ -12,6 +12,7 @@
 #   - Auditoria (auditd)       (/etc/audit/rules.d/*.rules — ruleset SSG standard)
 #   - cramfs desabilitado      (/etc/modprobe.d/cramfs.conf)
 #   - herd-compliance-scan     (relatório OpenSCAP — perfil 'standard' do SSG)
+#   - herd-harden              (endurecimento em 1 comando — OpenSCAP + Ansible)
 #
 # SELinux fica em Enforcing pela config do instalador/blueprint; num servidor
 # mínimo os booleans vêm nos padrões seguros — não mexemos aqui (mudar boolean à
@@ -21,7 +22,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        6%{?dist}.herd
+Release:        7%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -39,15 +40,19 @@ Requires:       openssh-server
 # que instala 708 MB (datastreams/guias de todos os produtos). Assim o
 # herd-compliance-scan roda de fábrica sem quase dobrar a imagem.
 Requires:       openscap-scanner
+# herd-harden aplica a remediação via os playbooks Ansible que o oscap gera
+# (fix-type ansible). ansible-core é o runtime mínimo (sem a coleção completa).
+Requires:       ansible-core
 
 Provides:       system-hardening-config = %{version}-%{release}
 
 %description
 Perfil básico de segurança do CapivaraOS HERD Community: SSH endurecido,
 política de qualidade de senha (pwquality), umask restritivo em sessões de
-login e o utilitário herd-compliance-scan, que gera um relatório de
-conformidade OpenSCAP (perfil "standard" do SCAP Security Guide do Fedora).
-Voltado a servidor headless com base Fedora 44.
+login e os utilitários herd-compliance-scan (relatório de conformidade
+OpenSCAP, perfil "standard" do SCAP Security Guide do Fedora) e herd-harden
+(endurecimento em 1 comando: aplica um perfil SSG via Ansible, com dry-run por
+padrão). Voltado a servidor headless com base Fedora 44.
 
 %prep
 %setup -q
@@ -61,6 +66,8 @@ install -D -m 0644 profile.d/capivaraos-herd-umask.sh \
     %{buildroot}%{_sysconfdir}/profile.d/capivaraos-herd-umask.sh
 install -D -m 0755 bin/herd-compliance-scan \
     %{buildroot}%{_bindir}/herd-compliance-scan
+install -D -m 0755 bin/herd-harden \
+    %{buildroot}%{_bindir}/herd-harden
 # Regras de auditoria (auditd): ruleset do SSG (perfil standard) + sub-regras
 # que o remediador não emite (deleção/rename e watch em /etc/group). Instaladas
 # em /etc/audit/rules.d/; o augenrules as mescla no boot (com -e 2 por último).
@@ -145,12 +152,24 @@ done
 %config(noreplace) %{_sysconfdir}/modprobe.d/cramfs.conf
 %{_sysconfdir}/profile.d/capivaraos-herd-umask.sh
 %{_bindir}/herd-compliance-scan
+%{_bindir}/herd-harden
 %{_datadir}/%{name}/ssg-fedora-ds.xml
 # Licença do datastream do SCAP Security Guide vendorado (BSD-3-Clause):
 # o BSD-3 exige reproduzir copyright + condições junto do material redistribuído.
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Thu Aug 27 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-7.herd
+- Adiciona o herd-harden: endurecimento em 1 comando (FEAT-123). Aplica um
+  perfil do SSG do Fedora via os playbooks Ansible que o oscap gera
+  (fix-type ansible), com DRY-RUN por padrão (ansible-playbook --check --diff)
+  e --apply explícito para efetivar. Apelidos de perfil: standard, ospp,
+  cis-l1, cis-l2 (cis) e pci (pci-dss); aceita também o id técnico completo.
+- Requires: ansible-core (runtime mínimo do Ansible; sem coleções extras).
+- Guardrail de conformidade: CIS = rascunho do SSG p/ Fedora (sem benchmark
+  oficial); não há STIG p/ Fedora (ospp é o baseline DoD-adjacente). Sem
+  alegação de "certificado".
+
 * Fri Aug 14 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-6.herd
 - Empacota a licença do SCAP Security Guide (BSD-3-Clause, (c) Red Hat, Inc.)
   como %license, ao lado do datastream ssg-fedora-ds.xml vendorado. O BSD-3
