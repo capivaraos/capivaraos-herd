@@ -36,6 +36,34 @@ bootloader --location=mbr --append="audit_backlog_limit=8192"
 # USUÁRIO/ROOT: interativo — sem rootpw/user, o admin cria na instalação.
 # NB (PROD-41): PasswordAuthentication no exige chave SSH; um usuário criado só
 # com senha loga no CONSOLE (físico/IPMI) e adiciona a chave depois.
+#
+# ── OPÇÃO: criptografia de disco em repouso (LUKS) ───────────────────────────
+# Por padrão o disco é INTERATIVO: na tela de particionamento do Anaconda o
+# admin pode marcar "Criptografar meus dados" e definir a senha — este é o
+# caminho recomendado, sem mexer no kickstart.
+#
+# Para uma instalação AUTOMÁTICA e já criptografada, descomente UM dos blocos
+# abaixo (particionamento deixa de ser interativo):
+#
+#   # a) simples — LVM criptografado ocupando o disco:
+#   # clearpart --all --initlabel
+#   # autopart --type=lvm --encrypted --passphrase=TROQUE-ESTA-SENHA
+#
+#   # b) manual — /boot em claro (exigido) e o resto no PV cifrado:
+#   # clearpart --all --initlabel
+#   # part /boot     --fstype=xfs --size=1024
+#   # part /boot/efi --fstype=efi --size=600          # só em UEFI
+#   # part pv.01     --grow --encrypted --passphrase=TROQUE-ESTA-SENHA
+#   # volgroup vg00 pv.01
+#   # logvol /       --vgname=vg00 --name=root --fstype=xfs --grow
+#
+# ATENÇÃO (servidor headless): um volume LUKS pede a SENHA no boot. Sem console
+# (físico/IPMI/serial) a máquina NÃO sobe sozinha após reiniciar. Para auto-
+# desbloqueio em servidor, avalie NBDE: Clevis + TPM2 (selo local) ou Tang
+# (rede) — roadmap/Enterprise. NÃO use LUKS em imagem de nuvem (qcow2).
+#
+# NUNCA versione uma senha real aqui. Prefira o fluxo interativo, ou gere a ISO
+# por cliente com a senha injetada no momento do build.
 
 %packages
 @core
