@@ -22,7 +22,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        7%{?dist}.herd
+Release:        8%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -41,8 +41,24 @@ Requires:       openssh-server
 # herd-compliance-scan roda de fábrica sem quase dobrar a imagem.
 Requires:       openscap-scanner
 # herd-harden aplica a remediação via os playbooks Ansible que o oscap gera
-# (fix-type ansible). ansible-core é o runtime mínimo (sem a coleção completa).
+# (fix-type ansible). ansible-core SOZINHO NÃO BASTA: os playbooks do SSG usam
+# módulos das coleções community.general (ini_file etc.), ansible.posix
+# (mount/sysctl/seboolean) e community.crypto — que não vêm no ansible-core.
+# Somados são ~28 MiB (core 15.7 + coleções ~12), aceitável para o carro-chefe
+# de conformidade e mantém o herd-harden funcional OFFLINE (sem baixar coleção).
 Requires:       ansible-core
+Requires:       ansible-collection-community-general
+Requires:       ansible-collection-ansible-posix
+Requires:       ansible-collection-community-crypto
+# O módulo package_facts (usado logo no início dos playbooks do SSG) precisa de
+# um binding Python de gerenciador de pacotes. A imagem mínima não traz nenhum
+# (o dnf5 é compilado, sem python3-libdnf5). python3-rpm é o mais enxuto
+# (~180 KiB) e satisfaz o gerenciador 'rpm' do package_facts.
+Requires:       python3-rpm
+# Já o módulo dnf (perfis do SSG instalam pacotes: rng-tools etc.) exige
+# python3-libdnf5 — inclusive em check mode (dry-run), onde não pode
+# auto-instalar. ~9.9 MiB, mas sem ele o harden não roda offline.
+Requires:       python3-libdnf5
 
 Provides:       system-hardening-config = %{version}-%{release}
 
@@ -159,6 +175,21 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Thu Aug 27 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-8.herd
+- Corrige o herd-harden: os playbooks Ansible do SSG usam módulos fora do
+  ansible-core. Adiciona Requires das coleções ansible-collection-community-general,
+  ansible-collection-ansible-posix e ansible-collection-community-crypto (~12 MiB),
+  para o herd-harden aplicar os perfis offline sem "No module named
+  ansible_collections.community". Sem isso o dry-run/apply aborta na 1ª tarefa
+  que usa community.general.ini_file (visto no teste do perfil ospp).
+- Também adiciona python3-rpm (~180 KiB) e python3-libdnf5 (~9.9 MiB): o
+  package_facts (início dos playbooks do SSG) exige um binding Python de
+  gerenciador de pacotes (rpm), e o módulo dnf — usado para instalar pacotes de
+  hardening (rng-tools etc.) — exige libdnf5 mesmo em check mode. Ambos ausentes
+  na imagem mínima (dnf5 é compilado, sem bindings Python). Sem eles o harden
+  falha com "Could not detect a supported package manager" e "python3-libdnf5
+  must be installed to use check mode".
+
 * Thu Aug 27 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-7.herd
 - Adiciona o herd-harden: endurecimento em 1 comando (FEAT-123). Aplica um
   perfil do SSG do Fedora via os playbooks Ansible que o oscap gera
