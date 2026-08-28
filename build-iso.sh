@@ -37,7 +37,9 @@ RELEASEVER=44                       # HERD 1.x = Fedora 44 (ver build.sh)
 PRODUCT="Herd by CapivaraOS"
 VARIANT="Server"
 VOLID="CapivaraOS-HERD-${VERSION}"  # <= 32 chars (ISO9660); casa com inst.repo
-KS="$SCRIPT_DIR/kickstart/capivaraos-herd.ks"
+# Kickstart embutido na ISO. Sobreponha com KS=/caminho/outro.ks ./build-iso.sh
+# (ex.: uma variante por cliente com autopart --encrypted já definido).
+KS="${KS:-$SCRIPT_DIR/kickstart/capivaraos-herd.ks}"
 BRANDING_REPO="/var/tmp/capivaraos-herd-repo"
 OUT="$SCRIPT_DIR/out"
 WORK="/var/tmp/herd-iso"
