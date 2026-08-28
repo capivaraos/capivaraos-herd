@@ -22,7 +22,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        10%{?dist}.herd
+Release:        11%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -59,6 +59,12 @@ Requires:       python3-rpm
 # python3-libdnf5 — inclusive em check mode (dry-run), onde não pode
 # auto-instalar. ~9.9 MiB, mas sem ele o harden não roda offline.
 Requires:       python3-libdnf5
+# update-crypto-policies (usado pela remediação dos perfis — ex.: ospp seta a
+# crypto-policy FIPS — e citado na doc via `--show`) vem do crypto-policies-scripts.
+# Garante que o herd-harden não dependa só da presença transitiva. ~390 KiB.
+# Obs.: o Fedora 44 REMOVEU o fips-mode-setup; FIPS agora é `fips=1` no kernel
+# cmdline (de preferência na instalação) — ver Changes/RemoveFipsModeSetup.
+Requires:       crypto-policies-scripts
 
 Provides:       system-hardening-config = %{version}-%{release}
 
@@ -175,6 +181,13 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-11.herd
+- Requires: crypto-policies-scripts (~390 KiB) — garante o update-crypto-policies
+  (usado pela remediação dos perfis, ex.: ospp seta crypto-policy FIPS, e citado
+  na doc via `--show`) sem depender da presença transitiva. Nota: o Fedora 44
+  removeu o fips-mode-setup; o FIPS agora se liga com `fips=1` no kernel cmdline
+  (de preferência na instalação) — a doc de Segurança foi atualizada.
+
 * Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-10.herd
 - herd-compliance-scan: aceita os mesmos apelidos de perfil do herd-harden
   (standard/ospp/cis-l1/cis-l2/pci, além do id completo) — vocabulário único
