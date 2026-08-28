@@ -22,7 +22,7 @@ Name:           capivaraos-herd-hardening
 Version:        1.0.0
 # Sufixo ".herd": mesma convenção do branding/logos (evita colisão de NEVRA em
 # ~/rpmbuild compartilhado — ver BUG-30).
-Release:        9%{?dist}.herd
+Release:        10%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -175,6 +175,14 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-10.herd
+- herd-compliance-scan: aceita os mesmos apelidos de perfil do herd-harden
+  (standard/ospp/cis-l1/cis-l2/pci, além do id completo) — vocabulário único
+  entre os dois comandos. E passa a gerar também um ARF (--results-arf) além do
+  HTML/XML: evidência machine-readable, re-renderizável e consumível por
+  ferramentas de auditoria (base da trilha de evidência, FEAT-99). Adiciona
+  --help.
+
 * Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-9.herd
 - herd-harden: após --apply, imprime aviso para confirmar o acesso SSH antes de
   encerrar a sessão, mostrando a crypto-policy atual. Validado em VM que o perfil

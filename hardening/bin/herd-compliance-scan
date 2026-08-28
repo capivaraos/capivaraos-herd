@@ -3,13 +3,18 @@
 # herd-compliance-scan — relatório de compliance OpenSCAP do CapivaraOS HERD.
 # =============================================================================
 # Avalia o sistema contra um perfil do SCAP Security Guide (SSG) do Fedora e
-# gera um relatório HTML legível + os resultados XML. Community: perfil
-# "standard" (padrão). O perfil CIS completo é diferencial do Enterprise (fase 2).
+# gera: relatório HTML legível, resultados XCCDF (XML) e um ARF (evidência
+# machine-readable, re-renderizável e consumível por ferramentas de auditoria).
+# Community: perfil "standard" (padrão).
 #
 # Uso:
 #   sudo herd-compliance-scan                 # perfil 'standard'
-#   sudo herd-compliance-scan <profile_id>    # outro perfil do SSG
+#   sudo herd-compliance-scan <perfil>        # apelido ou id completo do SSG
 #   herd-compliance-scan --list               # lista os perfis disponíveis
+#   herd-compliance-scan --help
+#
+# <perfil> aceita os mesmos apelidos do herd-harden, ou o id técnico completo:
+#   standard (padrão) · ospp · cis-l1 · cis-l2 (cis) · pci (pci-dss)
 #
 # oscap sai com código 2 quando há regras que FALHARAM (é resultado, não erro de
 # execução) — por isso não abortamos nesse caso.
@@ -20,7 +25,37 @@ set -eu
 # mais perfis/atualizado); senão usa o ssg-fedora-ds.xml vendorado pelo pacote.
 DS_STD=/usr/share/xml/scap/ssg/content/ssg-fedora-ds.xml
 DS_VENDORED=/usr/share/capivaraos-herd-hardening/ssg-fedora-ds.xml
-DEFAULT_PROFILE=xccdf_org.ssgproject.content_profile_standard
+PREFIX=xccdf_org.ssgproject.content_profile_
+DEFAULT_PROFILE=standard
+
+# Apelidos amigáveis -> id do perfil (mesmo conjunto do herd-harden).
+resolve_profile() {
+    case "$1" in
+        standard)             echo "${PREFIX}standard" ;;
+        ospp)                 echo "${PREFIX}ospp" ;;
+        cis-l1|cis_server_l1) echo "${PREFIX}cis_server_l1" ;;
+        cis-l2|cis)           echo "${PREFIX}cis" ;;
+        pci|pci-dss)          echo "${PREFIX}pci-dss" ;;
+        ${PREFIX}*)           echo "$1" ;;   # id técnico completo
+        *)                    return 1 ;;
+    esac
+}
+
+usage() {
+    cat <<'EOF'
+herd-compliance-scan — relatório de compliance OpenSCAP / OpenSCAP compliance report
+
+  sudo herd-compliance-scan [PERFIL]   avalia e gera HTML + XML (XCCDF) + ARF
+  herd-compliance-scan --list          lista os perfis do datastream
+  herd-compliance-scan --help
+
+PERFIL / PROFILE (apelido ou id completo):
+  standard (padrão) · ospp · cis-l1 · cis-l2 (cis) · pci (pci-dss)
+
+Saídas em /root/herd-compliance-<data>.{html,xml,arf.xml}. O ARF é a evidência
+machine-readable (re-renderizável e para ferramentas de auditoria).
+EOF
+}
 
 if [ -r "$DS_STD" ]; then
     DS="$DS_STD"
@@ -32,25 +67,32 @@ else
     exit 1
 fi
 
-if [ "${1:-}" = "--list" ] || [ "${1:-}" = "-l" ]; then
-    oscap info "$DS" | grep -i 'profile' || true
-    exit 0
-fi
+case "${1:-}" in
+    --list|-l) oscap info "$DS" | grep -i 'profile' || true; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
+esac
+
+PROFILE="$(resolve_profile "${1:-$DEFAULT_PROFILE}")" || {
+    echo "erro: perfil desconhecido: ${1:-}" >&2
+    echo "      use --list, ou um de: standard ospp cis-l1 cis-l2 pci" >&2
+    exit 2
+}
 
 [ "$(id -u)" -eq 0 ] || { echo "erro: rode como root (sudo herd-compliance-scan)." >&2; exit 1; }
 
-PROFILE="${1:-$DEFAULT_PROFILE}"
 TS="$(date +%Y%m%d-%H%M%S)"
 REPORT="/root/herd-compliance-${TS}.html"
 RESULTS="/root/herd-compliance-${TS}.xml"
+ARF="/root/herd-compliance-${TS}.arf.xml"
 
 echo "==> CapivaraOS HERD — avaliação de compliance"
 echo "    perfil:    ${PROFILE}"
 echo "    datastream:${DS}"
 echo
 oscap xccdf eval --profile "$PROFILE" \
-    --results "$RESULTS" --report "$REPORT" "$DS" || true
+    --results "$RESULTS" --results-arf "$ARF" --report "$REPORT" "$DS" || true
 
 echo
 echo "==> Relatório HTML: ${REPORT}"
 echo "==> Resultados XML: ${RESULTS}"
+echo "==> Evidência ARF:  ${ARF}"
