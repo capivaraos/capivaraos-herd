@@ -52,6 +52,7 @@ PAYLOAD_PKGS=(
     kernel capivaraos-herd-branding capivaraos-herd-hardening
     cloud-init qemu-guest-agent openssh-server
     firewalld chrony cockpit glibc-langpack-pt glibc-langpack-en
+    cryptsetup
 )
 
 echo "==> Herd by CapivaraOS installer ISO ${VERSION} (${ARCH})"

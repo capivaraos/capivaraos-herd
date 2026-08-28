@@ -78,6 +78,10 @@ chrony
 cockpit
 glibc-langpack-pt
 glibc-langpack-en
+# cryptsetup: necessário para instalar/bootar com disco cifrado (LUKS). Sem ele
+# no payload/repo offline, um install criptografado falha ("Nenhuma correspondência
+# para o argumento: cryptsetup"). Pequeno; entra sempre (LUKS é opção documentada).
+cryptsetup
 %end
 
 # O hardening (SSH, senha, umask, compliance) vem do pacote
