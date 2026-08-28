@@ -139,6 +139,22 @@ if [ "$APPLY" -eq 1 ]; then
     echo
     ansible-playbook $AP_ARGS "$PLAYBOOK" 2>&1 | tee "$LOG"
     echo
+    # Aviso de acesso: perfis altos (ospp/cis) trocam a crypto-policy do sistema
+    # p/ FIPS, o que INVALIDA chaves SSH ed25519 e cifras fora do conjunto FIPS —
+    # um login novo pode ser recusado. Mostra a política atual e pede confirmação.
+    POL="$(update-crypto-policies --show 2>/dev/null || true)"
+    cat <<EOF
+
+============================================================
+  ATENÇÃO — confirme o acesso ANTES de encerrar esta sessão
+============================================================
+  Este perfil pode ter mudado a política de criptografia do
+  sistema (crypto-policy atual: ${POL:-desconhecida}).
+  Sob FIPS, chaves SSH ed25519 deixam de ser aceitas.
+  -> Abra uma NOVA sessao SSH agora, de preferencia com chave
+     RSA ou ECDSA, e confirme que loga -- sem fechar esta.
+============================================================
+EOF
     echo "==> Concluído. Rode 'sudo herd-compliance-scan ${PROFILE_IN}' para conferir o score."
 else
     echo ">>  DRY-RUN (verificação, nada será alterado). Use --apply para aplicar."
