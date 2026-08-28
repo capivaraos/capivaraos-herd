@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: CC-BY-SA-4.0 */
-/* Branding do Cockpit (console web) do CapivaraOS HERD — PROD-67.
+/* Branding do Cockpit (console web) do Herd by CapivaraOS — PROD-67.
  *
  * Identidade VERDE (cor do site capivaraos.org): --color-green #2f7a3d,
  * --color-green-dark #1d4f27, --color-green-darker #163d1e.
@@ -33,7 +33,7 @@ body.login-pf {
     background-repeat: no-repeat;
 }
 
-/* Título dentro do cartão: "CapivaraOS HERD <versão>". */
+/* Título dentro do cartão: "Herd <versão>" (${NAME} vem do os-release). */
 #brand::before {
     content: "${NAME} <b>${VERSION_ID}</b>";
 }

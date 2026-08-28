@@ -1,12 +1,12 @@
-# CapivaraOS HERD
+# Herd by CapivaraOS
 
 Linha de **servidor** do CapivaraOS. Este repositório contém a infraestrutura de
-build das imagens do **HERD Community** (edição gratuita), com base **Fedora 44**
+build das imagens do **Herd Community** (edição gratuita), com base **Fedora 44**
 — a mesma geração das spins de desktop (Marsh/Pup/Snout 1.x). O **Fedora 45**
-fica reservado para a **geração 2** (HERD 2.x + próxima leva das spins), lançada
+fica reservado para a **geração 2** (Herd 2.x + próxima leva das spins), lançada
 em conjunto quando o F45 estiver maduro.
 
-> **Fase de lançamento:** apenas o **HERD Community**. (Jira: épico **PROD-4**;
+> **Fase de lançamento:** apenas o **Herd Community**. (Jira: épico **PROD-4**;
 > build/CI = **PROD-40**; escopo técnico = **PROD-38**; hardening = **PROD-41**.)
 
 ## O que é gerado
@@ -25,7 +25,7 @@ compõe para a arquitetura do host; para aarch64, rode num host/VM aarch64).
 ## Por que osbuild / Image Builder (e não kickstart+livemedia)
 
 Os desktops (Marsh/Pup/Snout) usam kickstart + `livemedia-creator`, ótimo para
-ISO live. O HERD precisa de **qcow2 e ISO** como cidadãos de primeira classe,
+ISO live. O Herd precisa de **qcow2 e ISO** como cidadãos de primeira classe,
 **multi-arch** e reprodutível — terreno do **osbuild**, que ainda é a rampa
 natural para a variante **bootc/imutável** (fase 2). Ver PROD-40.
 
@@ -42,7 +42,7 @@ natural para a variante **bootc/imutável** (fase 2). Ver PROD-40.
 ## Build
 
 ```bash
-# 1. Branding do HERD (RPM) e repo local para o composer consumir
+# 1. Branding do Herd (RPM) e repo local para o composer consumir
 ./rpm/build-rpm.sh
 NEVRA=$(rpmspec -q --qf '%{name}-%{version}-%{release}.%{arch}\n' \
     rpm/capivaraos-herd-branding.spec | head -1)
@@ -78,7 +78,7 @@ sudo ./build-iso.sh
 ```
 
 - `capivaraos-herd-logos` substitui o `fedora-logos` no ambiente do Anaconda.
-- `lorax -p "CapivaraOS HERD"` brandeia o nome de produto (menu/`.buildstamp`).
+- `lorax -p "Herd by CapivaraOS"` brandeia o nome de produto (menu/`.buildstamp`).
 - `mkksiso` embute o `kickstart/capivaraos-herd.ks` (perfil de servidor) e um
   repo offline, tornando a instalação autossuficiente.
 
@@ -106,7 +106,7 @@ hardening/                        # SSH/senha/umask + herd-compliance-scan (PROD
 
 - **Código** (scripts de build, kickstart, specs, configs): **GPLv3** — ver
   [LICENSE](LICENSE).
-- **Nome e logotipo** "CapivaraOS" / "HERD": **marca protegida**, todos os
+- **Nome e logotipo** "CapivaraOS" / "Herd": **marca protegida**, todos os
   direitos reservados — ver [TRADEMARK.md](TRADEMARK.md). Você pode usar e
   redistribuir o software; para redistribuir versões **modificadas**, remova a
   identidade visual (logo, nome, `os-release`).

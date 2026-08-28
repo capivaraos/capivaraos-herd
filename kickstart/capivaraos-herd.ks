@@ -1,5 +1,5 @@
 # =============================================================================
-# Kickstart do CapivaraOS HERD Community — instalador de servidor headless.
+# Kickstart do Herd by CapivaraOS (Community) — instalador de servidor headless.
 # =============================================================================
 # PARCIAL de propósito: define o PERFIL do sistema (locale, timezone, rede,
 # firewall, serviços, hardening, pacotes) mas deixa DISCO e USUÁRIO/ROOT

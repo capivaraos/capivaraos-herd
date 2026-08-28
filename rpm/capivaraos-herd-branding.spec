@@ -11,7 +11,7 @@ Version:        1.0.0
 # ~/rpmbuild na mesma máquina. Sem um sufixo de linha, duas na mesma
 # Version-Release gerariam nomes de arquivo idênticos — já causou incidentes
 # nos desktops (BUG-30). Com o sufixo a colisão é impossível por construção.
-Release:        9%{?dist}.herd
+Release:        10%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
 # Código (os-release/issue/motd, script BLS) sob GPLv3; a arte de logo do Cockpit
@@ -131,7 +131,7 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 # — foi o bug do instalador, o kernel-install do Anaconda roda antes do nosso
 # %posttrans). NÃO troque para /etc/os-release: isso faria sair cedo e pular o
 # kernel-install, reintroduzindo o bug.
-grep -q '^NAME="CapivaraOS HERD"' %{_prefix}/lib/os-release 2>/dev/null && exit 0
+grep -q '^NAME="Herd"' %{_prefix}/lib/os-release 2>/dev/null && exit 0
 cp -f %{_datadir}/capivaraos-herd/os-release %{_sysconfdir}/os-release
 cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
 for kver in $(ls /lib/modules 2>/dev/null); do
@@ -158,7 +158,16 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %config(noreplace) %{_sysconfdir}/cockpit/*.override.json
 
 %changelog
-* Wed Aug 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-9.herd
+* Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-10.herd
+- Rebrand da identidade para a linha "Herd by CapivaraOS" + versão do produto
+  1.0.0 -> 1.0.1. Esquema misto: os-release NAME="Herd" (GRUB/Cockpit curtos)
+  e PRETTY_NAME="Herd by CapivaraOS 1.0.1 (Community)"; /etc/issue e MOTD com a
+  forma completa "Herd by CapivaraOS 1.0.1". VERSION_ID/VERSION/CPE -> 1.0.1.
+  IDs técnicos (ID, ID_LIKE, PLATFORM_ID, LOGO) inalterados. Guarda do
+  %transfiletriggerin ajustada para o novo NAME (comportamento idêntico — o
+  /usr/lib/os-release segue sendo o do Fedora, então nunca curto-circuita).
+  fix-bls-titles.sh deriva o título do GRUB do os-release → "Herd (kver) 1.0.1
+  (Community)". Ver PROD-82.
 - Aponta a documentação para o local real: DOCUMENTATION_URL e a linha do MOTD
   passam a https://docs.capivaraos.org/pt/herd/ (antes capivaraos.org/docs/herd,
   link morto). SUPPORT_URL passa a .../pt/herd/suporte/. Os links de docs do

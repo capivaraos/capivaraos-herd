@@ -37,7 +37,7 @@ BRANDING_REPO="/var/tmp/capivaraos-herd-repo"   # repo local com o RPM de brandi
 TYPES=("$@")
 [ ${#TYPES[@]} -eq 0 ] && TYPES=(qcow2 image-installer)
 
-echo "==> CapivaraOS HERD Community ${VERSION} (${ARCH})"
+echo "==> Herd by CapivaraOS ${VERSION} (${ARCH})"
 
 # ── Sanidade: estamos num host F44? ─────────────────────────────────────────
 # osbuild compõe para o release do host; HERD 1.x tem base F44.

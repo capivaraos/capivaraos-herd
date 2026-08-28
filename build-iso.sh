@@ -34,7 +34,7 @@ BLUEPRINT_TOML="$SCRIPT_DIR/blueprints/capivaraos-herd.toml"
 VERSION="$(awk -F'"' '/^version[[:space:]]*=/{print $2; exit}' "$BLUEPRINT_TOML")"
 ARCH="$(uname -m)"
 RELEASEVER=44                       # HERD 1.x = Fedora 44 (ver build.sh)
-PRODUCT="CapivaraOS HERD"
+PRODUCT="Herd by CapivaraOS"
 VARIANT="Server"
 VOLID="CapivaraOS-HERD-${VERSION}"  # <= 32 chars (ISO9660); casa com inst.repo
 KS="$SCRIPT_DIR/kickstart/capivaraos-herd.ks"
@@ -52,7 +52,7 @@ PAYLOAD_PKGS=(
     firewalld chrony cockpit glibc-langpack-pt glibc-langpack-en
 )
 
-echo "==> CapivaraOS HERD installer ISO ${VERSION} (${ARCH})"
+echo "==> Herd by CapivaraOS installer ISO ${VERSION} (${ARCH})"
 
 # ── Sanidade ─────────────────────────────────────────────────────────────────
 [ "$(id -u)" -eq 0 ] || { echo "ERRO: rode com sudo (lorax/dnf precisam de root)." >&2; exit 1; }

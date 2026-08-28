@@ -1,6 +1,6 @@
 name = "capivaraos-herd"
-description = "CapivaraOS HERD Community — servidor headless, base Fedora 44"
-version = "1.0.0"
+description = "Herd by CapivaraOS Community — servidor headless, base Fedora 44"
+version = "1.0.1"
 
 # =============================================================================
 # CapivaraOS HERD Community 1.0.0 — blueprint osbuild / Image Builder
