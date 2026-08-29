@@ -38,6 +38,17 @@ armazenado — precisaria da CDN Cloudflare na frente para zerar banda, mais pe�
 para configurar. Por isso o padrão é **R2**. O R2 exige conta Cloudflare com forma
 de pagamento cadastrada mesmo no free tier.
 
+> **Quando o host de produção é necessário (e por que adiar não atrasa nada):**
+> só no **lançamento**. Durante o desenvolvimento, `publish-repo.sh add`/`promote`
+> montam e assinam o repo **localmente** (`out/repo/…`) e testamos instalação por
+> `file://` ou `python -m http.server`; para um teste "online" há o **Copr**
+> (grátis, sem cartão). A confiança vem da assinatura, não do host, e o `baseurl`
+> aponta para o domínio **nosso** (`repo.capivaraos.org`) — dá para apontar esse
+> DNS a R2/B2/qualquer host **depois**, sem mexer em nenhum pacote. **Decisão:**
+> R2 é o alvo de produção (melhor escolha técnica), mas a ativação (e o cartão)
+> fica **adiada** para o lançamento. O pré-requisito que realmente destrava o
+> desenvolvimento é a **chave GPG** (`keys/gen-signing-key.sh`), não o host.
+
 ### Setup do R2 (produção)
 
 1. Criar o bucket (ex.: `capivaraos-herd`) no R2.
