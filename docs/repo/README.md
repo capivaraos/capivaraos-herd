@@ -30,8 +30,26 @@ auditor quer ver documentado (cadeia de integridade fim-a-fim).
 
 | Fase | Host | Por quê |
 |---|---|---|
-| **Bootstrap** | **Fedora Copr** | grátis, já assina e serve; bom para as primeiras builds/testes sem montar infra. |
-| **Produção** | **`repo.capivaraos.org`** = object storage S3-compat (**Cloudflare R2** ou **Backblaze B2**) + **CDN Cloudflare** | barato, global, sob nossa marca; egress camarada (R2 tem egress zero). É só arquivos estáticos — nada de servidor de aplicação. |
+| **Bootstrap** | **Fedora Copr** | grátis, já assina e serve; bom para as primeiras builds/testes sem montar infra nem billing. |
+| **Produção (decidido)** | **`repo.capivaraos.org`** = **Cloudflare R2** + CDN Cloudflare | um repo é "muito download, pouco storage": o **egress grátis/ilimitado do R2** ganha. Free tier (10 GB + egress zero) cobre o nosso caso; acima disso são centavos de storage, nunca banda. É só arquivos estáticos. |
+
+Backblaze B2 foi avaliado (storage mais barato) mas o egress só é grátis até 3× o
+armazenado — precisaria da CDN Cloudflare na frente para zerar banda, mais peças
+para configurar. Por isso o padrão é **R2**. O R2 exige conta Cloudflare com forma
+de pagamento cadastrada mesmo no free tier.
+
+### Setup do R2 (produção)
+
+1. Criar o bucket (ex.: `capivaraos-herd`) no R2.
+2. Ligar **custom domain** `repo.capivaraos.org` no bucket (o R2 serve com a CDN
+   Cloudflare automaticamente).
+3. Configurar o `rclone` uma vez: `rclone config` → tipo `s3`, provider
+   `Cloudflare`, endpoint do R2 e as chaves de acesso. Nome do remote = `r2`
+   (ou ajuste `HERD_RCLONE_REMOTE` no `publish-repo.sh`).
+4. **Cache na CDN (importante):** o `publish-repo.sh` já sobe os **RPMs** como
+   imutáveis (`max-age` longo) e o **`repodata/`** com cache curto + revalidação —
+   assim a borda nunca serve um índice velho apontando para um pacote que já
+   mudou de canal. Ajustável via `HERD_CACHE_RPM` / `HERD_CACHE_META`.
 
 **Domínio (decisão fechada, ver reference_domains_org_com):** o repositório
 **grátis/Community** vive no **`.org`** (`repo.capivaraos.org`). Um usuário da

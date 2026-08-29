@@ -30,8 +30,18 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${HERD_REPO_ROOT:-${PROJECT_DIR}/out/repo}"   # raiz local do repo
+# Destino de PRODUÇÃO: Cloudflare R2 (egress grátis; ideal p/ repo = muito
+# download, pouco storage). Configure o remote uma vez com:
+#   rclone config   # tipo "s3", provider "Cloudflare", endpoint do R2, chaves
+# e aponte o domínio repo.capivaraos.org para o bucket (custom domain do R2).
+# BOOTSTRAP alternativo (enquanto não há R2): Fedora Copr, grátis, assina/hospeda.
 RCLONE_REMOTE="${HERD_RCLONE_REMOTE:-r2:capivaraos-herd}" # destino do upload
 GPG_KEY_NAME="${HERD_GPG_NAME:-CapivaraOS Herd (repo signing key)}"
+# Cache na CDN: RPMs são imutáveis (cache longo); o índice muda a cada publicação
+# e NÃO pode ficar velho na borda (cache curto + revalidação). Evita cliente
+# baixar repomd antigo apontando p/ pacote que já saiu.
+CACHE_RPM="${HERD_CACHE_RPM:-public, max-age=31536000, immutable}"
+CACHE_META="${HERD_CACHE_META:-public, max-age=300, must-revalidate}"
 
 die() { echo "ERRO: $*" >&2; exit 1; }
 
@@ -95,15 +105,20 @@ case "$CMD" in
         command -v rclone >/dev/null || die "rclone ausente (para o upload)"
         BASE="${REPO_ROOT}/herd/f${REL}/${ARCH}"
         [ -d "$BASE" ] || die "nada para subir em $BASE"
-        echo "upload ${BASE} -> ${RCLONE_REMOTE}/herd/f${REL}/${ARCH}"
-        # --checksum: sobe só o que mudou; repodata primeiro poderia deixar
-        # metadado apontando p/ RPM ausente — então subimos RPMs ANTES do índice.
+        DEST="${RCLONE_REMOTE}/herd/f${REL}/${ARCH}"
+        echo "upload ${BASE} -> ${DEST}"
+        # Ordem importa: sobem-se os RPMs (imutáveis, cache longo) ANTES do índice,
+        # senão o repodata poderia, por segundos, apontar p/ um RPM ainda ausente.
         rclone copy --checksum --exclude 'repodata/**' \
-            "$BASE" "${RCLONE_REMOTE}/herd/f${REL}/${ARCH}"
-        rclone copy --checksum \
-            "$BASE/stable/repodata"  "${RCLONE_REMOTE}/herd/f${REL}/${ARCH}/stable/repodata"  2>/dev/null || true
-        rclone copy --checksum \
-            "$BASE/testing/repodata" "${RCLONE_REMOTE}/herd/f${REL}/${ARCH}/testing/repodata" 2>/dev/null || true
+            --header-upload "Cache-Control: ${CACHE_RPM}" \
+            "$BASE" "$DEST"
+        # Índice por último, com cache curto (a borda não pode servir repomd velho).
+        for ch in stable testing; do
+            [ -d "$BASE/$ch/repodata" ] || continue
+            rclone copy --checksum \
+                --header-upload "Cache-Control: ${CACHE_META}" \
+                "$BASE/$ch/repodata" "$DEST/$ch/repodata"
+        done
         echo "OK: upload concluído"
         ;;
     *)
