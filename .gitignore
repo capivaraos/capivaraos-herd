@@ -9,3 +9,10 @@
 /pkglists/
 /lorax.conf
 /*-pkgsizes.txt
+
+# CHAVE PRIVADA de assinatura do repo — NUNCA versionar (ver keys/README.md).
+# A pública (keys/RPM-GPG-KEY-capivaraos-herd) É versionada de propósito.
+*PRIVATE*
+*.private.asc
+keys/*secret*
+keys/*.sec.asc

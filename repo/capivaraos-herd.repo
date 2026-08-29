@@ -1,0 +1,43 @@
+# CapivaraOS Herd — repositório de atualizações assinado (Community, GRÁTIS).
+#
+# Fecha a lacuna crítica do PROD-105: um Herd JÁ INSTALADO passa a receber os
+# NOSSOS pacotes (capivaraos-herd-*, herd-harden/herd-compliance-scan, fixes de
+# segurança) — além dos updates do Fedora. Antes, os RPMs próprios só existiam
+# offline dentro da ISO; o sistema instalado não tinha repo nenhum apontado.
+#
+# CONFIANÇA NÃO DEPENDE DO HOST: a assinatura é NOSSA (chave GPG própria, abaixo).
+# gpgcheck + repo_gpgcheck rejeitam qualquer pacote OU metadado que não esteja
+# assinado pela nossa chave — mesmo que o servidor/CDN seja comprometido, ninguém
+# empurra update malicioso. A chave PRIVADA fica OFFLINE (HSM/cofre); só a
+# pública viaja neste pacote. Ver keys/README.md e docs/repo/README.md.
+#
+# DOMÍNIO .org DE PROPÓSITO: o repo grátis vive no domínio da COMUNIDADE
+# (capivaraos.org). Um usuário Community NUNCA precisa tocar o domínio comercial
+# (.com) para receber correção de segurança — protege o pacto FOSS. O repo
+# Enterprise gated por licença é que vive no .com. Ver reference_domains_org_com.
+#
+# $releasever resolve para a base Fedora (44 no Herd 1.x) via
+# system-release(releasever) do fedora-release — NÃO pelo VERSION_ID do
+# os-release. Num `dnf system-upgrade --releasever=45` ele vira 45 e o baseurl
+# aponta sozinho para herd/f45/, sem editar este arquivo.
+
+[capivaraos-herd]
+name=CapivaraOS Herd $releasever - $basearch
+baseurl=https://repo.capivaraos.org/herd/f$releasever/$basearch/stable/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
+metadata_expire=6h
+
+# Canal de pré-produção (QA). DESLIGADO por padrão; um testador liga com
+# `dnf --enablerepo=capivaraos-herd-testing update`. Um fix promovido para
+# stable some daqui. Ver o fluxo testing->stable em docs/repo/README.md.
+[capivaraos-herd-testing]
+name=CapivaraOS Herd $releasever - $basearch - Testing
+baseurl=https://repo.capivaraos.org/herd/f$releasever/$basearch/testing/
+enabled=0
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
+metadata_expire=6h

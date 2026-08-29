@@ -70,6 +70,12 @@ bootloader --location=mbr --append="audit_backlog_limit=8192"
 kernel
 capivaraos-herd-branding
 capivaraos-herd-hardening
+# Configuração do repositório de updates assinado (PROD-105): faz o sistema
+# INSTALADO receber os pacotes próprios do projeto (não só os do Fedora). Instala
+# só o .repo + chave GPG (import offline no %post), então não precisa de rede no
+# install. GUARDRAIL: não cortar ISO com este pacote antes de
+# repo.capivaraos.org/herd/ estar no ar (ver docs/repo/README.md).
+capivaraos-herd-repos
 cloud-init
 qemu-guest-agent
 openssh-server

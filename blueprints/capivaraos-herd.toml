@@ -76,6 +76,15 @@ version = "*"
 name = "capivaraos-herd-hardening"
 version = "*"
 
+# ── Repositório de updates assinado (PROD-105) ──────────────────────────────
+# Instala /etc/yum.repos.d/capivaraos-herd.repo + chave GPG pública para o
+# sistema INSTALADO receber os pacotes próprios do projeto (não só os do Fedora).
+# Fecha a lacuna crítica do PROD-102. GUARDRAIL: não publicar imagem com este
+# pacote antes de repo.capivaraos.org/herd/ estar no ar (ver docs/repo/README.md).
+[[packages]]
+name = "capivaraos-herd-repos"
+version = "*"
+
 # =============================================================================
 # CUSTOMIZAÇÕES
 # =============================================================================
