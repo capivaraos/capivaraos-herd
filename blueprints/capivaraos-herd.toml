@@ -12,11 +12,8 @@ version = "1.0.1"
 # para x86_64 e aarch64 (um builder osbuild por arquitetura).
 #
 # HERD 1.x tem base Fedora 44, a MESMA geração dos desktops (Marsh/Pup/Snout
-# 1.x = F44) — assim aprendemos com o HERD já agora e lançamos tudo em conjunto.
-# O Fedora 45 fica reservado para a GERAÇÃO 2 (HERD 2.x + próxima leva das
-# spins), quando o F45 estiver maduro e já teremos ajustes do HERD 1.x pra
-# aplicar. Perfil alinhado à PROD-38 (escopo técnico) e PROD-41
-# (hardening/compliance).
+# 1.x = F44) — base única facilita manutenção e QA. Perfil alinhado à PROD-38
+# (escopo técnico) e PROD-41 (hardening/compliance).
 # =============================================================================
 
 # ── Identidade visual do HERD (RPM próprio) ─────────────────────────────────

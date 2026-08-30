@@ -10,7 +10,7 @@
 #
 # PRÉ-REQUISITOS:
 #   - Host Fedora 44 (HERD 1.x = F44, mesma base das spins). Builda direto na
-#     máquina de dev — sem VM. O Fedora 45 fica para a geração 2 (HERD 2.x).
+#     máquina de dev — sem VM.
 #   - osbuild-composer + composer-cli instalados e o serviço ativo:
 #       sudo dnf install -y osbuild-composer composer-cli
 #       sudo systemctl enable --now osbuild-composer.socket
