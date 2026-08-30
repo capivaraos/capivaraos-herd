@@ -14,7 +14,7 @@
 O **Herd Control** é o painel de administração **próprio** do Herd by CapivaraOS.
 Ele sustenta o modelo **open-core**: o sistema operacional e a segurança são
 **gratuitos**; a monetização vem de **serviços e features pagas** no painel
-(frota, evidência de compliance agendada, backup orquestrado, etc.), nunca do SO.
+(detalhadas no planejamento interno), nunca do SO.
 
 O painel precisa:
 
@@ -145,9 +145,9 @@ As features Enterprise ficam **gated** por essa verificação.
 
 - **Grátis:** overview, serviços, updates, firewall, usuários, logs, terminal e a
   **página de Compliance** (herd-harden/scan na UI).
-- **Pago:** frota (PROD-90), compliance agendado + evidência ARF/PDF (PROD-88),
-  patch central, backup orquestrado, monitoramento/alertas, runner Ansible, NBDE
-  key mgmt, RBAC/auditoria avançada (PROD-91).
+- **Pago:** capacidades avançadas de operação e conformidade para frotas/empresas
+  (o detalhamento fica no planejamento interno do Jira, não neste repositório
+  público).
 - **SO e segurança-base NUNCA entram no paywall.**
 
 ## PoC mínimo (próximo passo do PROD-84)
