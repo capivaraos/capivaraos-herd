@@ -27,7 +27,7 @@ network --bootproto=dhcp --activate
 # ── Segurança / serviços (espelha a blueprint) ──────────────────────────────
 firewall --enabled --service=ssh,cockpit
 selinux --enforcing
-services --enabled=sshd,chronyd,firewalld,cloud-init.target,cockpit.socket
+services --enabled=sshd,chronyd,firewalld,cloud-init.target,cockpit.socket,dnf5-automatic.timer
 
 # ── Bootloader ──────────────────────────────────────────────────────────────
 bootloader --location=mbr --append="audit_backlog_limit=8192"
@@ -76,6 +76,10 @@ capivaraos-herd-hardening
 # install. GUARDRAIL: não cortar ISO com este pacote antes de
 # repo.capivaraos.org/herd/ estar no ar (ver docs/repo/README.md).
 capivaraos-herd-repos
+# Atualização automática de segurança (PROD-106): política do dnf5 automatic +
+# habilita dnf5-automatic.timer (na linha services acima). Puxa dnf5-plugin-
+# automatic. Aplica só updates de segurança, sem auto-reboot.
+capivaraos-herd-autoupdate
 cloud-init
 qemu-guest-agent
 openssh-server

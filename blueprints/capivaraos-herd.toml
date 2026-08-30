@@ -85,6 +85,13 @@ version = "*"
 name = "capivaraos-herd-repos"
 version = "*"
 
+# ── Atualização automática de segurança (PROD-106) ──────────────────────────
+# Política do dnf5 automatic (aplica só updates de segurança, sem auto-reboot).
+# Puxa dnf5-plugin-automatic; o timer é habilitado em [customizations.services].
+[[packages]]
+name = "capivaraos-herd-autoupdate"
+version = "*"
+
 # =============================================================================
 # CUSTOMIZAÇÕES
 # =============================================================================
@@ -116,7 +123,7 @@ disabled = ["mdns"]
 # ciclo (local/network/config/final) via cloud-init.target. Habilitar o alvo
 # é a forma canônica; pedir "cloud-init" falha ("Unit does not exist").
 [customizations.services]
-enabled = ["sshd", "firewalld", "chronyd", "cloud-init.target", "cockpit.socket"]
+enabled = ["sshd", "firewalld", "chronyd", "cloud-init.target", "cockpit.socket", "dnf5-automatic.timer"]
 
 # ── SSH endurecido ──────────────────────────────────────────────────────────
 # MOVIDO para o pacote capivaraos-herd-hardening (fonte única; ver seção de

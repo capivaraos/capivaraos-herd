@@ -116,9 +116,14 @@ nunca apontar (mesmo que por segundos) para um pacote ainda ausente.
   chaveiro do rpm no `%post` (sem prompt no primeiro update).
 - Embarcado nos dois caminhos de build: `%packages` do kickstart e blueprint
   osbuild.
-- **Consumo automático:** com `dnf-automatic` (PROD-106) o servidor aplica as
-  atualizações de segurança sozinho; na UI, a página de Updates do Herd Control
-  (PROD-108) mostra/aplica/agenda.
+- **Consumo automático (PROD-106, implementado):** o pacote
+  `capivaraos-herd-autoupdate` configura o **dnf5 automatic**
+  (`/etc/dnf/automatic.conf`: `upgrade_type=security`, `apply_updates=yes`,
+  `reboot=never`) e habilita o `dnf5-automatic.timer` (diário, ~06:00). O servidor
+  **aplica sozinho as atualizações de segurança** — vindas tanto do Fedora quanto
+  do nosso repo assinado — **sem reiniciar** (reboot fica com o admin / a página de
+  Updates do Herd Control, PROD-108). A política é editável em
+  `/etc/dnf/automatic.conf` (ex.: só baixar = `apply_updates=no`).
 
 ## Ordem de implantação (guardrail)
 
