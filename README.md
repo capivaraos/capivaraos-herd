@@ -2,12 +2,28 @@
 
 Linha de **servidor** do CapivaraOS. Este repositório contém a infraestrutura de
 build das imagens do **Herd Community** (edição gratuita), com base **Fedora 44**
-— a mesma geração das spins de desktop (Marsh/Pup/Snout 1.x). O **Fedora 45**
-fica reservado para a **geração 2** (Herd 2.x + próxima leva das spins), lançada
-em conjunto quando o F45 estiver maduro.
+— a mesma geração das spins de desktop (Marsh/Pup/Snout 1.x).
 
 > **Fase de lançamento:** apenas o **Herd Community**. (Jira: épico **PROD-4**;
 > build/CI = **PROD-40**; escopo técnico = **PROD-38**; hardening = **PROD-41**.)
+
+## Como funcionam os releases (o que é estável)
+
+Este repositório se desenvolve **em aberto**: a branch `main` recebe trabalho
+contínuo e **não é um release**. Não coloque um servidor em produção compilando
+da `main`.
+
+O que é **estável e suportado**:
+
+- **Imagens oficiais (ISO/qcow2):** publicadas no SourceForge e no site
+  (docs.capivaraos.org). É o que se instala em produção.
+- **Atualizações:** o canal **`stable`** do repositório assinado
+  (`repo.capivaraos.org`), consumido pelo pacote `capivaraos-herd-repos`. O canal
+  `testing` é pré-produção (QA).
+- **Marcos no git:** cada release corresponde a uma **tag** (ex.: `herd-1.0.1`).
+
+Ou seja: código na `main` = em evolução e auditável; **release = ISO publicada +
+canal `stable` + tag**. Ver `docs/repo/README.md` para o fluxo de publicação.
 
 ## O que é gerado
 
