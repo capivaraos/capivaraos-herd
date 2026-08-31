@@ -80,6 +80,11 @@ capivaraos-herd-repos
 # habilita dnf5-automatic.timer (na linha services acima). Puxa dnf5-plugin-
 # automatic. Aplica só updates de segurança, sem auto-reboot.
 capivaraos-herd-autoupdate
+# Upgrade de versão in-place (PROD-107): ferramenta `herd-upgrade`, invólucro
+# auditável do dnf5 system-upgrade (F44->F45 e além, sem formatar). Só entrega
+# o comando; o upgrade é sempre disparado pelo admin. Mesmo guardrail do repos:
+# o pré-voo falha fechado enquanto herd/f<destino>/ não estiver publicado.
+capivaraos-herd-upgrade
 cloud-init
 qemu-guest-agent
 openssh-server
