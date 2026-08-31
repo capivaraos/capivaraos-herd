@@ -1,0 +1,250 @@
+#!/bin/sh
+# =============================================================================
+# herd-upgrade — upgrade de versão in-place do CapivaraOS Herd (PROD-107)
+# =============================================================================
+# Atualiza o servidor para a PRÓXIMA versão SEM formatar, usando a transação
+# OFFLINE do dnf5 (`dnf5 system-upgrade`): baixa tudo com o sistema no ar e
+# aplica no próximo boot, num ambiente isolado. É o análogo, no servidor
+# headless, do "nova versão disponível" do desktop.
+#
+# SEGURANÇA / marca (auditável, sem surpresa):
+#   * Por padrão só faz VERIFICAÇÃO (`check`) — não baixa nem reinicia nada.
+#   * Baixar e reiniciar são passos SEPARADOS e EXPLÍCITOS (download / reboot).
+#   * FALHA FECHADA: se o NOSSO repositório assinado (capivaraos-herd) ainda não
+#     existir para a versão de destino, RECUSA o upgrade — senão o servidor
+#     subiria a base Fedora e deixaria os nossos pacotes (herd-harden, branding,
+#     repos, autoupdate) para trás. A confiança vem da assinatura GPG do repo
+#     (gpgcheck + repo_gpgcheck): a transação offline recusa pacote/metadado não
+#     assinado pela nossa chave, mesmo com host/CDN comprometido.
+#   * Snapshot ANTES do upgrade quando o storage suporta (snapper/btrfs
+#     automático; LVM é reportado com o comando manual). Rollback documentado.
+#
+# Uso:
+#   herd-upgrade [check]                    # relatório de pré-voo (padrão, seguro)
+#   sudo herd-upgrade download [--to N]     # baixa a transação (não reinicia)
+#   sudo herd-upgrade reboot                # aplica: reinicia no modo offline
+#   sudo herd-upgrade run [--to N]          # download + reboot (com confirmação)
+#   herd-upgrade status | log | clean       # atalhos do dnf5 system-upgrade
+#   herd-upgrade --help
+#
+# --to N (ou --releasever N): versão Fedora de destino. Sem isso, assume a
+# ATUAL+1 (ex.: 44 -> 45). O destino NÃO é cravado no código: sai de
+# `rpm -E %fedora`, então a mesma ferramenta serve para os saltos futuros.
+# =============================================================================
+set -eu
+
+REPO_ID=capivaraos-herd                 # id do canal stable (repo/capivaraos-herd.repo)
+META_PKG=capivaraos-herd-repos          # pacote-meta que prova que o NOSSO repo existe no destino
+MIN_FREE_MIB=5120                       # aviso se /var/cache tiver menos que isto p/ baixar
+
+usage() {
+    cat <<'EOF'
+herd-upgrade — upgrade de versão in-place / in-place version upgrade (dnf5 system-upgrade)
+
+  herd-upgrade [check]                 pré-voo: mostra o que aconteceria (padrão, seguro)
+  sudo herd-upgrade download [--to N]  baixa a transação offline (NÃO reinicia)
+  sudo herd-upgrade reboot             aplica agora: reinicia no modo offline
+  sudo herd-upgrade run [--to N]       download + reboot (pede confirmação)
+  herd-upgrade status | log | clean    atalhos do dnf5 system-upgrade
+  herd-upgrade --help
+
+  --to N, --releasever N   versão Fedora de destino (padrão: atual + 1)
+
+Sem argumento, roda 'check' e nada é alterado. Download e reboot são passos
+explícitos. / With no argument it runs 'check' and changes nothing; download and
+reboot are explicit, separate steps.
+EOF
+}
+
+# ---- utilitários -------------------------------------------------------------
+die()  { echo "erro: $*" >&2; exit 1; }
+need_root() { [ "$(id -u)" -eq 0 ] || die "rode como root (sudo herd-upgrade $ACTION ...)."; }
+
+# dnf5 é o gestor do Fedora 44+; o subcomando system-upgrade é embutido no core.
+command -v dnf5 >/dev/null 2>&1 || die "'dnf5' não encontrado (esperado no Fedora 44+)."
+
+CUR="$(rpm -E %fedora)"
+[ -n "$CUR" ] && [ "$CUR" != "%fedora" ] || die "não consegui detectar a versão atual do Fedora."
+
+# ---- parse -------------------------------------------------------------------
+ACTION=""
+TARGET=""
+ASSUME_YES=0
+NO_SNAPSHOT=0
+ALLOW_MISSING_REPO=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        check|download|reboot|run|status|log|clean)
+            [ -z "$ACTION" ] || die "só uma ação por vez."
+            ACTION="$1" ;;
+        --to=*|--releasever=*)   TARGET="${1#*=}" ;;
+        --to|--releasever)
+            [ $# -ge 2 ] || die "use --to N (ex.: --to 45)."
+            TARGET="$2"; shift ;;
+        --yes|-y)                ASSUME_YES=1 ;;
+        --no-snapshot)           NO_SNAPSHOT=1 ;;
+        --allow-missing-herd-repo) ALLOW_MISSING_REPO=1 ;;
+        -h|--help)               usage; exit 0 ;;
+        -*)                      die "opção desconhecida: $1" ;;
+        *)  # também aceita a versão como valor solto (ex.: herd-upgrade check 45)
+            if [ -z "$TARGET" ] && echo "$1" | grep -qE '^[0-9]+$'; then TARGET="$1"
+            else die "argumento inesperado: $1"; fi ;;
+    esac
+    shift
+done
+[ -n "$ACTION" ] || ACTION=check
+[ -n "$TARGET" ] || TARGET=$((CUR + 1))
+
+echo "$TARGET" | grep -qE '^[0-9]+$' || die "versão de destino inválida: $TARGET"
+[ "$TARGET" -gt "$CUR" ] 2>/dev/null || die "destino ($TARGET) precisa ser maior que a versão atual ($CUR)."
+
+# ---- atalhos de passagem para o dnf5 ----------------------------------------
+case "$ACTION" in
+    status) exec dnf5 system-upgrade status ;;
+    log)    exec dnf5 system-upgrade log ;;
+    clean)  need_root; exec dnf5 system-upgrade clean ;;
+esac
+
+# ---- pré-voo (usado por check/download/run) ---------------------------------
+# Confere se o NOSSO repositório assinado existe para a versão de destino. É a
+# trava de segurança central: sem ele, o upgrade deixaria os pacotes do Herd
+# para trás. Só isso já demonstra a recusa correta enquanto a f<destino> não
+# estiver publicada.
+herd_repo_ready() {
+    # `dnf5 repoquery` pode sair 0 mesmo quando o repo não carrega (metadado
+    # indisponível => resultado vazio). Por isso NÃO basta o exit code: exigimos
+    # que a saída realmente contenha o pacote-meta assinado do destino.
+    out="$(dnf5 -q --releasever="$TARGET" --repo="$REPO_ID" \
+        repoquery --available "$META_PKG" 2>/dev/null)" || return 1
+    echo "$out" | grep -q "^${META_PKG}-[0-9]"
+}
+
+# Capacidade de snapshot: snapper/btrfs (automático) ou LVM (manual/reportado).
+ROOT_FSTYPE="$(findmnt -no FSTYPE / 2>/dev/null || echo '?')"
+ROOT_SRC="$(findmnt -no SOURCE / 2>/dev/null || echo '?')"
+SNAP_MODE=none
+if [ "$ROOT_FSTYPE" = btrfs ] && command -v snapper >/dev/null 2>&1 \
+   && snapper list-configs 2>/dev/null | grep -qw root; then
+    SNAP_MODE=snapper
+elif command -v lvs >/dev/null 2>&1 && lvs --noheadings -o lv_name "$ROOT_SRC" >/dev/null 2>&1; then
+    SNAP_MODE=lvm
+fi
+
+# Espaço livre para baixar a transação (cache do dnf).
+CACHE_DIR=/var/cache
+FREE_MIB="$(df -Pm "$CACHE_DIR" 2>/dev/null | awk 'NR==2{print $4}')"
+[ -n "$FREE_MIB" ] || FREE_MIB=0
+
+preflight() {
+    echo "==> CapivaraOS Herd — pré-voo de upgrade de versão"
+    echo "    versão atual (Fedora):   $CUR"
+    echo "    versão de destino:       $TARGET"
+    # Geração do Herd, pelo nosso pacote de branding (se instalado).
+    if rpm -q capivaraos-herd-branding >/dev/null 2>&1; then
+        BR_CUR="$(rpm -q --qf '%{version}-%{release}\n' capivaraos-herd-branding | head -1)"
+        echo "    Herd (branding) instalado: $BR_CUR"
+    fi
+    echo "    raiz: $ROOT_SRC ($ROOT_FSTYPE)"
+    echo "    espaço livre em $CACHE_DIR: ${FREE_MIB} MiB"
+    echo
+
+    OK=1
+
+    printf '    [repo Herd f%s] ' "$TARGET"
+    if herd_repo_ready; then
+        echo "OK — repositório assinado disponível para f$TARGET."
+    else
+        OK=0
+        echo "AUSENTE."
+        echo "        O repositório assinado do Herd (capivaraos-herd) ainda não"
+        echo "        responde para f$TARGET. Fazer o upgrade agora subiria a base"
+        echo "        Fedora e deixaria os pacotes do Herd para trás. Recusado."
+        echo "        (Se for erro transitório de rede e você tem certeza, veja"
+        echo "         --allow-missing-herd-repo — por sua conta e risco.)"
+    fi
+
+    printf '    [espaço] '
+    if [ "$FREE_MIB" -ge "$MIN_FREE_MIB" ]; then
+        echo "OK (${FREE_MIB} MiB livres)."
+    else
+        echo "POUCO ESPAÇO: ${FREE_MIB} MiB < ${MIN_FREE_MIB} MiB recomendados em $CACHE_DIR."
+    fi
+
+    printf '    [snapshot] '
+    case "$SNAP_MODE" in
+        snapper) echo "snapper/btrfs disponível — snapshot automático antes do upgrade." ;;
+        lvm)     echo "raiz em LVM — snapshot automático NÃO é feito; veja o comando manual abaixo." ;;
+        none)    echo "sem snapshot (raiz não é btrfs+snapper nem LVM). Faça backup antes." ;;
+    esac
+    if [ "$SNAP_MODE" = lvm ]; then
+        echo "        Ex.: sudo lvcreate -s -n root_pre_f$TARGET -L 5G $ROOT_SRC"
+        echo "        (rollback: lvconvert --merge, depois reiniciar)."
+    fi
+
+    echo
+    return $((1 - OK))
+}
+
+maybe_snapshot() {
+    [ "$NO_SNAPSHOT" -eq 0 ] || { echo "==> --no-snapshot: pulando snapshot."; return 0; }
+    case "$SNAP_MODE" in
+        snapper)
+            echo "==> Criando snapshot snapper (pré-upgrade)…"
+            snapper create -d "pré herd-upgrade f$CUR -> f$TARGET" \
+                && echo "    snapshot criado (snapper list para ver)." \
+                || echo "    aviso: falha ao criar snapshot; seguindo mesmo assim." ;;
+        lvm)
+            echo "==> Raiz em LVM: snapshot automático não é feito (rollback de LVM exige"
+            echo "    merge no reboot). Se quiser proteção, crie o snapshot manual ANTES:"
+            echo "      sudo lvcreate -s -n root_pre_f$TARGET -L 5G $ROOT_SRC" ;;
+        none)
+            echo "==> Sem storage de snapshot compatível — nenhum snapshot criado." ;;
+    esac
+}
+
+confirm() {
+    [ "$ASSUME_YES" -eq 0 ] || return 0
+    printf '%s [s/N] ' "$1"
+    read -r ans || true
+    case "$ans" in [sSyY]*) return 0 ;; *) echo "cancelado."; exit 1 ;; esac
+}
+
+do_download() {
+    need_root
+    if ! preflight; then
+        [ "$ALLOW_MISSING_REPO" -eq 1 ] || die "pré-voo reprovado (veja acima). Upgrade abortado."
+        echo "!!  --allow-missing-herd-repo: seguindo APESAR do pré-voo reprovado."
+    fi
+    maybe_snapshot
+    echo
+    echo "==> Baixando a transação de upgrade para f$TARGET (o sistema segue no ar)…"
+    # A transação respeita gpgcheck/repo_gpgcheck do repo -> assinatura verificada.
+    dnf5 -y system-upgrade download --releasever="$TARGET"
+    echo
+    echo "==> Download concluído. Para aplicar (reinicia o servidor):"
+    echo "      sudo herd-upgrade reboot"
+}
+
+do_reboot() {
+    need_root
+    echo "==> Isto vai REINICIAR o servidor e aplicar o upgrade num ambiente offline."
+    echo "    Confirme o acesso/console antes de continuar."
+    confirm "Reiniciar e aplicar o upgrade para f$TARGET agora?"
+    exec dnf5 system-upgrade reboot
+}
+
+case "$ACTION" in
+    check)
+        if preflight; then
+            echo "==> Pronto para upgrade. Próximo passo: sudo herd-upgrade download --to $TARGET"
+        else
+            echo "==> Pré-voo reprovado — o upgrade para f$TARGET NÃO está liberado ainda."
+            exit 1
+        fi ;;
+    download) do_download ;;
+    reboot)   do_reboot ;;
+    run)
+        do_download
+        echo
+        do_reboot ;;
+esac

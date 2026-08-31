@@ -89,6 +89,14 @@ version = "*"
 name = "capivaraos-herd-autoupdate"
 version = "*"
 
+# ── Upgrade de versão in-place (PROD-107) ───────────────────────────────────
+# Ferramenta `herd-upgrade`: invólucro auditável do dnf5 system-upgrade para
+# subir de versão sem formatar. Só entrega o comando (o upgrade é disparado pelo
+# admin); o pré-voo falha fechado enquanto herd/f<destino>/ não estiver no ar.
+[[packages]]
+name = "capivaraos-herd-upgrade"
+version = "*"
+
 # =============================================================================
 # CUSTOMIZAÇÕES
 # =============================================================================
