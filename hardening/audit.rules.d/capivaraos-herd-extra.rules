@@ -1,0 +1,12 @@
+## CapivaraOS HERD — regras que o remediador do SSG não emite (sub-regras)
+## Eventos de deleção de arquivo (unlink/rename), incl. rename* p/ a regra
+## audit_rules_file_deletion_events_rename.
+-a always,exit -F arch=b32 -S unlink,unlinkat,rename,renameat,renameat2 -F auid>=1000 -F auid!=unset -F key=delete
+-a always,exit -F arch=b64 -S unlink,unlinkat,rename,renameat,renameat2 -F auid>=1000 -F auid!=unset -F key=delete
+## Modificação de usuários/grupos (identity) — inclui /etc/group p/ a regra
+## audit_rules_usergroup_modification_group.
+-w /etc/group -p wa -k audit_rules_usergroup_modification
+-w /etc/passwd -p wa -k audit_rules_usergroup_modification
+-w /etc/gshadow -p wa -k audit_rules_usergroup_modification
+-w /etc/shadow -p wa -k audit_rules_usergroup_modification
+-w /etc/security/opasswd -p wa -k audit_rules_usergroup_modification

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📚 Documentação / Documentation
+    url: https://docs.capivaraos.org/pt/herd/
+    about: Guias de instalação, Cockpit, segurança e administração do HERD.
+  - name: 🔒 Reportar vulnerabilidade / Report a vulnerability
+    url: https://github.com/capivaraos/capivaraos-herd/security/advisories/new
+    about: Falhas de segurança NÃO devem virar issue pública. Use este canal privado (ver SECURITY.md).

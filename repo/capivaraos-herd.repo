@@ -1,0 +1,36 @@
+# CapivaraOS Herd Community — signed update repository.
+#
+# Lets an installed Herd receive the project's own packages (capivaraos-herd-*,
+# herd-harden, herd-compliance-scan, security fixes) in addition to Fedora
+# updates.
+#
+# Trust does not depend on the host: gpgcheck + repo_gpgcheck reject any
+# package OR metadata not signed by the project key, even if the server is
+# compromised. The private key is kept offline; only the public key ships in
+# this package. See keys/README.md and docs/repo/README.md.
+#
+# $releasever resolves to the Fedora base (44 on Herd 1.x) through
+# system-release(releasever) from fedora-release, NOT from VERSION_ID in
+# os-release. During `dnf system-upgrade --releasever=45` it becomes 45 and
+# baseurl points to herd/f45/ without editing this file.
+
+[capivaraos-herd]
+name=CapivaraOS Herd $releasever - $basearch
+baseurl=https://repo.capivaraos.org/herd/f$releasever/$basearch/stable/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
+metadata_expire=6h
+
+# Canal de pré-produção (QA). DESLIGADO por padrão; um testador liga com
+# `dnf --enablerepo=capivaraos-herd-testing update`. Um fix promovido para
+# stable some daqui. Ver o fluxo testing->stable em docs/repo/README.md.
+[capivaraos-herd-testing]
+name=CapivaraOS Herd $releasever - $basearch - Testing
+baseurl=https://repo.capivaraos.org/herd/f$releasever/$basearch/testing/
+enabled=0
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
+metadata_expire=6h

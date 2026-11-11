@@ -1,0 +1,131 @@
+name = "capivaraos-herd"
+description = "Herd by CapivaraOS Community — servidor headless, base Fedora 44"
+version = "1.0.1"
+
+# =============================================================================
+# CapivaraOS HERD Community 1.0.0 — blueprint osbuild / Image Builder
+# =============================================================================
+# Single source of truth for the build. From this blueprint
+# build.sh produces TWO images:
+#   - qcow2            (nuvem/VM, com cloud-init)
+#   - image-installer  (ISO instalador headless para bare-metal/VM)
+# para x86_64 e aarch64 (um builder osbuild por arquitetura).
+#
+# Herd 1.x is based on Fedora 44, the same generation as the desktop spins
+# (Marsh/Pup/Snout 1.x).
+# =============================================================================
+
+# ── Herd visual identity (own RPM) ────────────────────────────────────────────
+# Pulled from a custom composer source that serves only the Herd RPM (see
+# build.sh and rpm/), so branding from another spin with the same NEVRA cannot
+# be picked up.
+[[packages]]
+name = "capivaraos-herd-branding"
+version = "*"
+
+# ── Núcleo de servidor ──────────────────────────────────────────────────────
+[[packages]]
+name = "cloud-init"
+version = "*"
+
+[[packages]]
+name = "qemu-guest-agent"
+version = "*"
+
+[[packages]]
+name = "openssh-server"
+version = "*"
+
+[[packages]]
+name = "firewalld"
+version = "*"
+
+[[packages]]
+name = "chrony"
+version = "*"
+
+# Cockpit: web administration UI (services, network, storage, updates,
+# in-browser terminal) at https://<ip>:9090. cockpit.socket is socket-activated
+# (nothing runs until port 9090 is accessed); the port is opened in firewalld below.
+[[packages]]
+name = "cockpit"
+version = "*"
+
+# glibc-langpack-pt para que pt_BR.UTF-8 exista na imagem (server mínimo não
+# traz todos os langpacks como o glibc-all-langpacks dos lives de desktop).
+[[packages]]
+name = "glibc-langpack-pt"
+version = "*"
+
+[[packages]]
+name = "glibc-langpack-en"
+version = "*"
+
+# ── Basic security profile ────────────────────────────────────────────────────
+# Ships hardened SSH, password policy (pwquality), umask 027, audit rules,
+# herd-compliance-scan and herd-harden. Single source for both images. Pulls in
+# openscap-scanner and ships the Fedora SCAP datastream (not the full
+# scap-security-guide package).
+[[packages]]
+name = "capivaraos-herd-hardening"
+version = "*"
+
+# ── Signed update repository ──────────────────────────────────────────────────
+# Installs /etc/yum.repos.d/capivaraos-herd.repo and the public GPG key so the
+# INSTALLED system receives the project's own packages, not only Fedora's.
+# Do not publish an image with this package before repo.capivaraos.org/herd/
+# is online (see docs/repo/README.md).
+[[packages]]
+name = "capivaraos-herd-repos"
+version = "*"
+
+# ── Automatic security updates ────────────────────────────────────────────────
+# Política do dnf5 automatic (aplica só updates de segurança, sem auto-reboot).
+# Puxa dnf5-plugin-automatic; o timer é habilitado em [customizations.services].
+[[packages]]
+name = "capivaraos-herd-autoupdate"
+version = "*"
+
+# ── In-place version upgrade ──────────────────────────────────────────────────
+# Ferramenta `herd-upgrade`: invólucro auditável do dnf5 system-upgrade para
+# subir de versão sem formatar. Só entrega o comando (o upgrade é disparado pelo
+# admin); o pré-voo falha fechado enquanto herd/f<destino>/ não estiver no ar.
+[[packages]]
+name = "capivaraos-herd-upgrade"
+version = "*"
+
+# =============================================================================
+# CUSTOMIZAÇÕES
+# =============================================================================
+[customizations]
+hostname = "capivaraos-herd"
+
+[customizations.locale]
+languages = ["pt_BR.UTF-8", "en_US.UTF-8"]
+keyboard = "br-abnt2"
+
+[customizations.timezone]
+timezone = "America/Sao_Paulo"
+ntpservers = ["pool.ntp.br"]
+
+# ── Firewall (hardening) ────────────────────────────────────────────────────
+# Libera SSH + Cockpit (9090). Remove o mdns (descoberta avahi — superfície
+# desnecessária num servidor). MANTÉM o dhcpv6-client: é serviço de CLIENTE
+# (recebe respostas DHCPv6); removê-lo quebraria o endereçamento IPv6 em redes
+# que usam DHCPv6. Resultado da zona public: ssh, cockpit, dhcpv6-client.
+[customizations.firewall.services]
+enabled = ["ssh", "cockpit"]
+disabled = ["mdns"]
+
+# ── Serviços habilitados ────────────────────────────────────────────────────
+# cloud-init stays enabled in the base image; on bare metal without a
+# datasource it effectively does nothing.
+# NB: no Fedora 44 não existe mais "cloud-init.service" — o pacote orquestra o
+# ciclo (local/network/config/final) via cloud-init.target. Habilitar o alvo
+# é a forma canônica; pedir "cloud-init" falha ("Unit does not exist").
+[customizations.services]
+enabled = ["sshd", "firewalld", "chronyd", "cloud-init.target", "cockpit.socket", "dnf5-automatic.timer"]
+
+# ── Hardened SSH ──────────────────────────────────────────────────────────────
+# Provided by capivaraos-herd-hardening
+# (/etc/ssh/sshd_config.d/50-capivaraos-herd.conf). Do not duplicate here.

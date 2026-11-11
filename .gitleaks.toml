@@ -1,0 +1,7 @@
+# Keeps the default rules and skips one third-party file.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Third-party SCAP datastream from the SCAP Security Guide"
+paths = ['''hardening/scap/ssg-fedora-ds\.xml''']

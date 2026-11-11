@@ -1,0 +1,7 @@
+{
+    "menu": {
+        "index":    { "docs": [] },
+        "services": { "docs": [] },
+        "logs":     { "docs": [] }
+    }
+}

@@ -1,0 +1,2 @@
+-a always,exit -F arch=b32 -S init_module -S finit_module -S delete_module -F key=modules
+-a always,exit -F arch=b64 -S init_module -S finit_module -S delete_module -F key=modules
