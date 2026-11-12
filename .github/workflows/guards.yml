@@ -1,0 +1,49 @@
+name: Guards
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      HEAD_REF: ${{ github.head_ref }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Commit identity
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: bash .github/scripts/check-identity.sh
+
+      - name: Shell syntax
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/check-shell.sh
+
+      - name: Commit language
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/check-language.sh
+
+      - name: Text policy
+        if: ${{ !cancelled() }}
+        env:
+          POLICY_DENY_B64: ${{ secrets.POLICY_DENY_B64 }}
+          POLICY_ALLOW_B64: ${{ secrets.POLICY_ALLOW_B64 }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: bash .github/scripts/check-text.sh
