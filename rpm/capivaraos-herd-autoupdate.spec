@@ -15,7 +15,7 @@
 # só se ainda não existir (edições do admin persistem = "configurável").
 
 Name:           capivaraos-herd-autoupdate
-Version:        1.0.0
+Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
 Release:        1%{?dist}.herd
@@ -29,9 +29,10 @@ Source0:        automatic.conf
 
 # Quem baixa/aplica os updates é o plugin automatic do dnf5.
 Requires:       dnf5-plugin-automatic
-# Faz sentido junto do repositório assinado (senão só atualiza o Fedora, não os
-# nossos pacotes). Não é um acoplamento rígido de funcionamento, mas de propósito.
-Requires:       capivaraos-herd-repos
+# The signed Herd repository, from the first version that ships the
+# dnf5-automatic.service drop-in that imports both Herd keys before each
+# unattended run. An older capivaraos-herd-repos has no such step.
+Requires:       capivaraos-herd-repos >= 2.0.0-0.4.alpha1
 
 Provides:       system-autoupdate-config = %{version}-%{release}
 
@@ -62,6 +63,21 @@ fi
 %{_datadir}/%{name}/automatic.conf
 
 %changelog
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Mon Nov 16 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.3.alpha1.herd
+- Require capivaraos-herd-repos 2.0.0-0.4.alpha1 or later, the first version
+  that ships the dnf5-automatic.service drop-in that imports both Herd keys
+  before each unattended run.
+
+* Thu Nov 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- Rebuild from the current sources. No functional change.
+
+* Mon Sep 21 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45): bump de versão. dnf-automatic é agnóstico de
+  release; sem mudança funcional.
+
 * Sat Aug 29 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de atualização automática: configura o dnf5 automatic
   (upgrade_type=security, apply_updates=yes, reboot=never, emit_via=motd,stdio).

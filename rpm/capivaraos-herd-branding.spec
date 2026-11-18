@@ -1,134 +1,148 @@
-# capivaraos-herd-branding — identidade do CapivaraOS HERD (servidor headless)
+# capivaraos-herd-branding: identity of CapivaraOS Herd (headless server)
 #
-# Unlike the desktop branding (wallpapers, SDDM, Plasma theme), HERD is
-# headless: branding is textual (/etc/os-release, /etc/issue, motd) plus the web
-# console (Cockpit). It also fixes the boot menu titles (GRUB/BLS) to the
-# CapivaraOS brand through a single script.
+# Unlike the desktop branding (wallpapers, SDDM, Plasma theme), Herd is
+# headless: its branding is text (/etc/os-release, /etc/issue, motd) plus the
+# web console (Cockpit). It also sets the boot menu titles (GRUB/BLS) to the
+# CapivaraOS name through a single script.
 
 Name:           capivaraos-herd-branding
-Version:        1.0.0
-# ".herd" suffix: every spin builds a branding package and they share
-# ~/rpmbuild on the same machine. Without a per-line suffix, two spins at the
-# same Version-Release would produce identical file names; the suffix makes a
-# collision impossible.
-Release:        10%{?dist}.herd
+Version:        2.0.0
+# ".herd" suffix, as in the other Herd packages: keeps the NEVRA apart from
+# the other editions' packages in a shared ~/rpmbuild.
+Release:        2%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
-# Código (os-release/issue/motd, script BLS) sob GPLv3; a arte de logo do Cockpit
-# é marca registrada do projeto (ver TRADEMARK.md).
+# Code (os-release/issue/motd, BLS script) under GPLv3; the Cockpit logo artwork
+# is a trademark of the project (see TRADEMARK.md).
 License:        GPL-3.0-or-later AND LicenseRef-CapivaraOS-Trademark
 URL:            https://capivaraos.org
 BuildArch:      noarch
 
 Source0:        %{name}-%{version}.tar.gz
 
-# Gera a arte do branding do Cockpit (logo/ícones) a partir das logos da marca.
+# Builds the Cockpit branding artwork (logo and icons) from the brand logos.
 BuildRequires:  ImageMagick
 
 Provides:       system-release-branding = %{version}-%{release}
 
-# NB: NÃO declaramos "Requires: cockpit-ws". O diretório de branding é inerte sem
-# o Cockpit, e o Cockpit já entra no payload do HERD (kickstart/blueprint). Um
-# Requires acoplaria este pacote de identidade à instalação do Cockpit sem ganho.
+# No "Requires: cockpit-ws". The branding directory does nothing without
+# Cockpit, and Cockpit is already in the Herd payload (kickstart/blueprint). A
+# Requires would tie this identity package to the Cockpit install for no gain.
 
 %description
 Pacote de identidade do CapivaraOS HERD Community: /etc/os-release,
 /etc/issue e mensagem do dia (/etc/motd.d/capivaraos-herd). Voltado a
-servidor headless com base Fedora 44.
+servidor headless com base Fedora 45.
 
 %prep
 %setup -q
 
 %build
-# ── Arte do branding do Cockpit (identidade VERDE, cor do site) ─────────────
-# Badge do login: tile verde arredondado (verde-escuro #163d1e) com a logo
-# BRANCA da capivara centralizada — "logo com fundo verde", que lê bem tanto na
-# página de login (fundo verde #2f7a3d) quanto no shell interno (fundo claro).
-# Um único asset serve aos dois temas (claro/escuro), sem precisar de logo-dark.
-# Renderizado em 2x (640x360) p/ hidpi; o CSS usa background-size: contain.
-# IMPORTANT: the logo is resized by WIDTH **and HEIGHT** (560x300) so it fits
-# the tile; limiting only the width made it taller than the tile and clipped it.
+# ── Cockpit branding artwork (Herd navy identity) ───────────────────────────
+# Login badge = the brand avatar (src/avatar-navy-branca.png): navy #1E2F4E
+# square with the WHITE capybara + "CapivaraOS". The CSS paints the login page
+# in the SAME navy, so the avatar edge disappears and only the white logo shows
+# on the navy background. Normalised to PNG; the CSS uses a square badge with
+# background-size: contain.
 cd cockpit
-convert -size 640x360 xc:none \
-    -fill '#163d1e' -draw 'roundrectangle 0,0,639,359,52,52' \
-    \( src/capivaraos-logo-branca.png -resize 560x300 \) -gravity center -composite \
-    logo.png
-# Ícones (cabeça branca sobre tile verde), quadrados: aba do navegador e iOS.
+convert src/avatar-navy-branca.png -resize 400x400 logo.png
+# Square icons (white head on a navy tile): browser tab and iOS.
 convert -size 180x180 xc:none \
-    -fill '#163d1e' -draw 'roundrectangle 0,0,179,179,32,32' \
+    -fill '#1E2F4E' -draw 'roundrectangle 0,0,179,179,32,32' \
     \( src/capivaraos-cabeca-branca.png -resize 132x \) -gravity center -composite \
     apple-touch-icon.png
 convert apple-touch-icon.png -define icon:auto-resize=16,32,48 favicon.ico
 cd -
 
 %install
-# os-release e issue NÃO vão para /etc no %files (ver NOTA abaixo). Ficam num
-# datadir privado como fonte de verdade, e os scriptlets copiam para /etc.
+# os-release and issue do not go to /etc in %files (see the note below). They
+# live in a private datadir as the source, and the scriptlets copy them to /etc.
 install -d %{buildroot}%{_datadir}/capivaraos-herd
 install -m 0644 os-release %{buildroot}%{_datadir}/capivaraos-herd/os-release
+# VERSION_ID is the Fedora release this package is built for, not the Herd
+# version. PackageKit (the Cockpit "Software updates" page) uses VERSION_ID as
+# the Fedora release for the Fedora mirrors, so it must be the same number as
+# %%{fedora}. The Herd version is in VERSION, PRETTY_NAME and CPE_NAME.
+[ -n "%{?fedora}" ] || { echo "%%{fedora} is not set: build on Fedora" >&2; exit 1; }
+sed -i 's/^VERSION_ID=@FEDORA_VERSION@$/VERSION_ID=%{fedora}/' %{buildroot}%{_datadir}/capivaraos-herd/os-release
+grep -qx 'VERSION_ID=%{fedora}' %{buildroot}%{_datadir}/capivaraos-herd/os-release
+grep -qx 'PLATFORM_ID="platform:f%{fedora}"' %{buildroot}%{_datadir}/capivaraos-herd/os-release
 install -m 0644 issue      %{buildroot}%{_datadir}/capivaraos-herd/issue
-# Script único de correção dos títulos BLS do GRUB (chamado pelos scriptlets e
-# pelo %post do kickstart — ver comentários no %posttrans/%transfiletriggerin).
+# Single script that fixes the GRUB BLS titles (called by the scriptlets and by
+# the kickstart %post; see the comments in %posttrans/%transfiletriggerin).
 install -m 0755 fix-bls-titles.sh %{buildroot}%{_datadir}/capivaraos-herd/fix-bls-titles.sh
-# motd.d/capivaraos-herd é um arquivo NOVO (ninguém mais o possui) — pode ir
-# normalmente no %files.
+# motd.d/capivaraos-herd is a new file that no other package owns, so it goes
+# in %files as usual.
 install -D -m 0644 motd    %{buildroot}%{_sysconfdir}/motd.d/capivaraos-herd
 
-# ── Branding do Cockpit (console web) ───────────────────────────────────────
-# Diretório escolhido pelo Cockpit via ID=capivaraos-herd do /etc/os-release.
-# Só possuímos o NOSSO subdiretório (o /usr/share/cockpit/branding é do cockpit).
+# ── Cockpit (web console) branding ──────────────────────────────────────────
+# Cockpit picks this directory from ID=capivaraos-herd in /etc/os-release.
+# We own only our subdirectory (/usr/share/cockpit/branding belongs to cockpit).
 install -d %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd
 install -m 0644 cockpit/branding.css cockpit/logo.png \
     cockpit/apple-touch-icon.png cockpit/favicon.ico \
     %{buildroot}%{_datadir}/cockpit/branding/capivaraos-herd/
 
-# ── Overrides de manifest do Cockpit ────────────────────────────────────────
-# Remove os links de documentação que apontam para docs.redhat.com no menu Ajuda
-# (mecanismo oficial e estável do Cockpit: /etc/cockpit/<pacote>.override.json,
-# mesclado sobre o manifest.json do pacote). Assim o menu fica com o nosso link
-# de docs (derivado do DOCUMENTATION_URL do os-release) + "Sobre", sem Red Hat.
-# Cobre os 5 pacotes que trazem links docs.redhat.com: shell, systemd, users,
-# networkmanager e storaged. Instala via glob p/ pegar qualquer override novo.
+# ── Cockpit manifest overrides ──────────────────────────────────────────────
+# Removes the documentation links to docs.redhat.com from the Help menu
+# (Cockpit's documented mechanism: /etc/cockpit/<package>.override.json, merged
+# over the package's manifest.json). The menu then keeps our docs link (from
+# DOCUMENTATION_URL in os-release) and "About", without Red Hat links.
+# Covers the 6 packages that carry docs.redhat.com links: shell, systemd, users,
+# networkmanager, storaged and packagekit. Installed with a glob to pick up any new override.
 install -d %{buildroot}%{_sysconfdir}/cockpit
 install -m 0644 cockpit/overrides/*.override.json %{buildroot}%{_sysconfdir}/cockpit/
 
-# NOTA CapivaraOS: /etc/os-release e /etc/issue pertencem ao
-# fedora-release-common. Tê-los no %files causa "conflito de arquivo" no rpm
-# durante a instalação (o build da imagem falha com exit 2). Por isso são
-# escritos direto no sistema em %posttrans (roda no fim da transação, então
-# nosso conteúdo prevalece) e reaplicados por %transfiletriggerin após updates.
+# ── fastfetch logo ──────────────────────────────────────────────────────────
+# fastfetch shows the Fedora ASCII logo (chosen from ID_LIKE in os-release). We
+# replace it with the brand's capybara head and "Herd by CapivaraOS". The art
+# goes to /usr/share/capivaraos-herd/fastfetch/ and config.jsonc (the logo and
+# a module list for a headless server) to /etc/xdg and /etc/skel. /etc/xdg is what counts on a
+# headless server: fastfetch reads XDG_CONFIG_DIRS=/etc/xdg when the user
+# (root included) has no ~/.config/fastfetch, so the admin sees the brand with
+# no setup. No auto-run: it shows only when the admin runs `fastfetch`.
+install -d %{buildroot}%{_datadir}/capivaraos-herd/fastfetch
+install -m 0644 fastfetch/capivara.txt %{buildroot}%{_datadir}/capivaraos-herd/fastfetch/capivara.txt
+for FDIR in %{buildroot}%{_sysconfdir}/skel/.config %{buildroot}%{_sysconfdir}/xdg; do
+    install -d "$FDIR/fastfetch"
+    install -m 0644 fastfetch/config.jsonc "$FDIR/fastfetch/config.jsonc"
+done
+
+# /etc/os-release and /etc/issue belong to fedora-release-common. Listing them
+# in %files causes an rpm file conflict during install (the image build fails
+# with exit 2). So they are written straight to the system in %posttrans (which
+# runs at the end of the transaction, so our content wins) and written again by
+# %transfiletriggerin after updates.
 
 %posttrans
-# Grava nossa identidade sobre a do Fedora (fim da transação).
+# Write our identity over Fedora's (end of the transaction).
 cp -f %{_datadir}/capivaraos-herd/os-release %{_sysconfdir}/os-release
 cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
-# Corrige os títulos do menu de boot (GRUB/BLS). No caminho osbuild (qcow2) o
-# kernel-install já criou as entradas com a marca Fedora ANTES deste %posttrans;
-# como não há kickstart nesse caminho, é AQUI que a correção precisa acontecer.
-# O os-release acima já é o nosso, então o script deriva o título certo.
+# Fix the boot menu titles (GRUB/BLS). On the osbuild path (qcow2),
+# kernel-install has already created the entries with the Fedora name BEFORE
+# this %posttrans; that path has no kickstart, so the fix must happen HERE.
+# The os-release above is already ours, so the script derives the right title.
 sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 
-# ── Reaplica os-release/issue após qualquer atualização futura do sistema ───
-# Como /etc/os-release continua pertencendo ao Fedora no rpmdb, um "dnf update"
-# que toque o pacote dono reescreve tudo de volta para o padrão do Fedora. Se
-# isso ocorrer na MESMA transação de um kernel novo, o título GRUB/BLS desse
-# kernel (gerado por kernel-install a partir de NAME/VERSION do os-release)
-# fica gravado como "Fedora Linux ..." — e preso assim para sempre. Por isso
-# reaplicamos e regravamos o BLS.
+# ── Write os-release/issue again after any later system update ─────────────
+# /etc/os-release still belongs to Fedora in the rpmdb, so a "dnf update" that
+# touches the owning package writes Fedora's defaults back. If that happens in
+# the SAME transaction as a new kernel, that kernel's GRUB/BLS title (made by
+# kernel-install from NAME/VERSION in os-release) is saved as "Fedora Linux ..."
+# and stays that way. So we write ours again and regenerate the BLS entries.
 #
-# ATENÇÃO — NÃO troque o prefixo por um caminho de arquivo exato: verificado
-# empiricamente (fedora:44) que %transfiletriggerin casa APENAS com prefixos
-# de DIRETÓRIO, nunca com caminho de arquivo. Por isso vigiamos o diretório
-# %{_prefix}/lib (onde vive o os-release "real" do Fedora).
+# WARNING: do not replace the prefix with an exact file path. Tested on
+# fedora:44: %transfiletriggerin matches DIRECTORY prefixes only, never a file
+# path. So we watch %{_prefix}/lib (where Fedora's own os-release lives).
 %transfiletriggerin -- %{_prefix}/lib
-# Guarda: checamos o /usr/lib/os-release (que NUNCA é reescrito por nós — só
-# mexemos no /etc/os-release). Como ele fica sempre com o NAME do Fedora, esta
-# condição NÃO curto-circuita, e o trigger sempre reaplica + roda kernel-install.
-# ISSO É PROPOSITAL: o kernel-install precisa rodar DEPOIS do os-release estar
-# corrigido para gravar o título BLS certo (senão o GRUB fica "Fedora Linux ..."
-# — foi o bug do instalador, o kernel-install do Anaconda roda antes do nosso
-# %posttrans). NÃO troque para /etc/os-release: isso faria sair cedo e pular o
-# kernel-install, reintroduzindo o bug.
+# Guard: we check /usr/lib/os-release, which we NEVER rewrite (we only touch
+# /etc/os-release). It always keeps Fedora's NAME, so this condition does NOT
+# short-circuit, and the trigger always writes again and runs kernel-install.
+# THIS IS INTENDED: kernel-install must run AFTER os-release is fixed to write
+# the right BLS title (otherwise GRUB shows "Fedora Linux ..."; this was the
+# installer bug, since Anaconda's kernel-install runs before our %posttrans).
+# Do NOT switch to /etc/os-release: that would exit early and skip
+# kernel-install, bringing the bug back.
 grep -q '^NAME="Herd"' %{_prefix}/lib/os-release 2>/dev/null && exit 0
 cp -f %{_datadir}/capivaraos-herd/os-release %{_sysconfdir}/os-release
 cp -f %{_datadir}/capivaraos-herd/issue      %{_sysconfdir}/issue
@@ -136,10 +150,10 @@ for kver in $(ls /lib/modules 2>/dev/null); do
     [ -f "/lib/modules/${kver}/vmlinuz" ] && \
         kernel-install add "${kver}" "/lib/modules/${kver}/vmlinuz" >/dev/null 2>&1 || true
 done
-# Corrige o título de TODAS as entradas (normais + rescue) para a nossa marca.
-# O kernel-install acima não reescreve entradas já existentes; o script força o
-# título a partir do /etc/os-release (já corrigido acima). Fonte única com o
-# %posttrans e o %post do kickstart.
+# Fix the title of ALL entries (normal and rescue) to our name. The
+# kernel-install above does not rewrite existing entries; the script sets the
+# title from /etc/os-release (already fixed above). Same script as %posttrans
+# and the kickstart %post.
 sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 
 %files
@@ -154,8 +168,60 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %{_datadir}/cockpit/branding/capivaraos-herd/apple-touch-icon.png
 %{_datadir}/cockpit/branding/capivaraos-herd/favicon.ico
 %config(noreplace) %{_sysconfdir}/cockpit/*.override.json
+%dir %{_datadir}/capivaraos-herd/fastfetch
+%{_datadir}/capivaraos-herd/fastfetch/capivara.txt
+%{_sysconfdir}/skel/.config/fastfetch/
+%{_sysconfdir}/xdg/fastfetch/
 
 %changelog
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- os-release VERSION_ID is the Fedora release (45), so the Cockpit "Software
+  updates" page reaches the Fedora mirrors. The Herd version stays in VERSION,
+  PRETTY_NAME and CPE_NAME, and the Cockpit login card shows VERSION.
+- The Cockpit Software updates page has no docs.redhat.com link in its Help
+  menu, like the other pages.
+
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release: os-release names the release "2.0.0 (Community)".
+
+* Thu Nov 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.5.alpha1.herd
+- Comments in the Cockpit CSS, the fastfetch config and the spec are in
+  English. No change to colours, layout or behaviour.
+- Cockpit CSS: SPDX tag set to GPL-3.0-or-later, matching the package License.
+
+* Tue Oct 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.3.alpha1.herd
+- Identidade azul-marinho do Herd: Cockpit e fastfetch passam de verde
+  para azul-marinho #1E2F4E + logo BRANCA, como o avatar da marca. Cockpit: fundo
+  de login e accent do host -> navy; badge passa a usar o avatar da marca
+  (src/avatar-navy-branca.png) — como a página é do mesmo navy, fica só a logo
+  branca sobre o fundo navy; favicon/apple-touch com tile navy.
+- fastfetch: config.jsonc passa a listar "modules" (conjunto de
+  servidor) — sem isso, nesta versão do fastfetch um config carregado imprimia SÓ
+  o logo, sem as infos do sistema. Cor do logo (silhueta + nome) -> BRANCA.
+  Validado em VM.
+
+* Tue Oct 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- Logo próprio do CapivaraOS no fastfetch: o painel ASCII do
+  terminal deixa de mostrar o logo do Fedora (que o fastfetch escolhia por ID_LIKE
+  do os-release) e passa a exibir a cabeça de capivara da marca + "Herd by
+  CapivaraOS" em VERDE (#15B22C). Arte em /usr/share/capivaraos-herd/fastfetch/
+  capivara.txt; config.jsonc (só o logo) em /etc/xdg/fastfetch/ (vale p/ root e
+  todos os usuários via XDG_CONFIG_DIRS, sem precisar configurar) e em
+  /etc/skel/.config/fastfetch/ (novos usuários). SEM auto-run — aparece só quando
+  o admin roda `fastfetch` (pacote fastfetch adicionado ao payload no
+  kickstart/blueprint). Mesmo padrão dos desktops.
+- O config.jsonc lista os "modules" (conjunto voltado a servidor: os/host/kernel/
+  uptime/load/packages/shell/cpu/memory/swap/disk/localip/locale): sem a chave o
+  fastfetch imprimiria SÓ o logo (nesta versão um config carregado define todo o
+  output). A silhueta da capivara usa a cor da marca (verde #15B22C), não a cor
+  default do fastfetch. Validado em VM (render com logo verde + infos do sistema).
+
+* Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Início da geração 2.x (rebase para Fedora 45). os-release/issue/motd para
+  2.0.0 pré-lançamento; VERSION_ID/VERSION/CPE -> 2.0.0; PLATFORM_ID ->
+  platform:f45. Release 0.1.alpha1 (NEVRA < 2.0.0-1). IDs técnicos (ID, ID_LIKE,
+  LOGO) inalterados.
+
 * Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-10.herd
 - Rebrand da identidade para a linha "Herd by CapivaraOS" + versão do produto
   1.0.0 -> 1.0.1. Esquema misto: os-release NAME="Herd" (GRUB/Cockpit curtos)
@@ -198,6 +264,7 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
   badge com tile verde-escuro #163d1e e a logo BRANCA da capivara, accent do
   host verde. Um único logo.png serve claro/escuro (dispensa logo-dark.png);
   favicon/apple-touch viram a cabeça branca sobre tile verde.
+
 * Tue Aug 11 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-5.herd
 - Adiciona branding visual do Cockpit (console web): instala
   /usr/share/cockpit/branding/capivaraos-herd/ (escolhido pelo ID do os-release)

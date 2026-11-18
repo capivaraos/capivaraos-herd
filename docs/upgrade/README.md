@@ -1,61 +1,85 @@
-# In-place version upgrade of Herd: `herd-upgrade`
+# In-place version upgrade: `herd-upgrade`
 
-## What it does
+`herd-upgrade` moves an installed Herd to a later Fedora base release. It
+does not reinstall the system. It wraps `dnf5 system-upgrade`, Fedora's
+offline upgrade: the transaction is downloaded while the server runs and
+applied on the next boot, in dnf5's offline upgrade mode.
 
-Continuous updates keep Herd Community patched **within the current version**. `herd-upgrade` moves a server to the **next version** (F44 → F45 and onwards) **without reinstalling**, keeping data, configuration and hardening. It is the headless-server counterpart of the desktop's "new version available".
+Its messages are in Portuguese.
 
-## How it works
-
-`herd-upgrade` is an **auditable wrapper** around `dnf5 system-upgrade`, Fedora's **offline** upgrade mechanism: everything is downloaded while the system is running and applied on the next boot, in an isolated environment with no services running. From Fedora 44 the subcommand is **built into `dnf5`** (there is no separate plugin).
-
-The target is **not hard-coded**: it comes from `rpm -E %fedora` (current version + 1) or from `--to N`. Because the repository `baseurl` uses `$releasever` (`herd/f$releasever/...`), the same tool and the same `.repo` file work for every later upgrade without changes.
+The target release is not fixed in the code. It is the current release plus
+one (`rpm -E %fedora` + 1), or the value of `--to N`. The Herd repository's
+`baseurl` uses `$releasever`
+(`https://repo-herd.capivaraos.org/f$releasever/$basearch/stable/`), so dnf
+fills in the target release; the file does not name one.
 
 ## Usage
 
 ```sh
-# 1. Pre-flight check (default, safe: no download, no reboot):
-herd-upgrade                 # or: herd-upgrade check --to 45
+# 1. Pre-flight (the default; downloads nothing and does not reboot):
+herd-upgrade                 # or: herd-upgrade check --to 46
 
-# 2. Download the transaction (the server stays up):
-sudo herd-upgrade download   # or: sudo herd-upgrade download --to 45
+# 2. Download the transaction (the server keeps running):
+sudo herd-upgrade download   # or: sudo herd-upgrade download --to 46
 
-# 3. Apply (reboots into offline mode):
+# 3. Apply it (reboots into the offline upgrade):
 sudo herd-upgrade reboot
 
-# Shortcut: download + reboot, with confirmation
-sudo herd-upgrade run --to 45
+# Shortcut: download, then reboot after a confirmation
+sudo herd-upgrade run --to 46
 
-# Utilities: status | log | clean (shortcuts to dnf5 system-upgrade)
+# dnf5 system-upgrade shortcuts: status | log | clean
 ```
 
-## Safety guarantees
+Options: `--to N` (or `--releasever N`) sets the target; `--no-snapshot`
+skips the snapshot step; `-y`/`--yes` skips the reboot confirmation;
+`--allow-missing-herd-repo` lets `download` and `run` continue past a failed
+repository check.
 
-1. **Safe by default.** With no argument it runs only the **pre-flight check**; nothing changes. Downloading and rebooting are **separate, explicit** steps.
-2. **Fails closed.** The pre-flight check **refuses** the upgrade if the signed Herd repository (`capivaraos-herd`) does **not yet exist** for the target version. Without this check the server would move to the new Fedora base and leave the Herd packages (branding, hardening, repos, autoupdate) **behind**. Until `repo.capivaraos.org/herd/f45/` is published, `herd-upgrade` stops at f45 on purpose. (For a transient network error, `--allow-missing-herd-repo` overrides the check at your own risk.)
-3. **Trust in the signature, not the host.** The transaction honours the repository's `gpgcheck=1` and `repo_gpgcheck=1`: it rejects any package **or metadata** not signed by the project key, even if the host is compromised (covered by `tests/test-repo-signing.sh`).
-4. **Snapshot first, when possible.** If the root filesystem is **btrfs + snapper**, an automatic snapshot is taken before the upgrade. On **LVM** (the Herd 1.x default with an encrypted disk), no automatic snapshot is taken, because LVM rollback requires a merge at reboot; the tool **prints** the manual command:
+## What it checks
 
-   ```sh
-   sudo lvcreate -s -n root_pre_f45 -L 5G /dev/mapper/<vg>-<root>
-   # rollback: sudo lvconvert --merge <snapshot> && reboot
-   ```
-
-   Without compatible storage, it reminds you to take a **backup** first.
+1. **Nothing changes by default.** With no argument it runs only the
+   pre-flight. Download and reboot are separate, explicit steps.
+2. **It refuses when the Herd repository is missing.** The pre-flight asks the
+   `capivaraos-herd` repository for `capivaraos-herd-repos` at the target
+   release. If the repository does not answer, or has no
+   `capivaraos-herd-repos` for the target release, the upgrade is refused
+   (exit 1), because it would move the Fedora base and leave the Herd packages
+   behind. `--allow-missing-herd-repo` overrides this for `download` and
+   `run`, for a transient network error only.
+3. **Signatures.** The Herd repository is configured with `gpgcheck=1` and
+   `repo_gpgcheck=1`. `tests/test-repo-signing.sh` shows a dnf install
+   refusing tampered metadata. The upgrade transaction itself is not tested.
+4. **Free space.** It warns when `/var/cache` has less than 5 GiB free. This is
+   a warning, not a refusal.
+5. **Snapshot when the storage allows it.** Herd does not install or
+   configure Snapper or LVM snapshots.
+   - Btrfs root where the administrator set up Snapper with a `root` config:
+     a Snapper snapshot is taken before the download. If the snapshot fails,
+     the tool warns and continues.
+   - Root on LVM: no automatic snapshot. It prints the `lvcreate -s` command to
+     run by hand.
+   - Anything else, such as the ext4 root of the Herd 2.0 qcow2 image: no
+     snapshot. Take a backup first.
 
 ## Rollback
 
-- **snapper/btrfs:** `snapper rollback` from the pre-upgrade snapshot.
-- **LVM:** `lvconvert --merge` on the manually created snapshot, then reboot.
-- **No snapshot:** restore from backup. This is why the pre-flight check asks
-  for a backup when there is no snapshot.
-
-## Tests
-
-`tests/test-upgrade.sh` (Fedora 44 container) covers building and installing the package, argument checks, refusal when the target repository does not exist, approval when it does, and a safe abort of `download` when the pre-flight check fails.
+- **Snapper:** see the Snapper documentation.
+- **LVM:** the pre-flight prints the hint `lvconvert --merge` on the snapshot
+  you created, then reboot. This path is not tested.
+- **No snapshot:** restore from backup.
 
 ## Packaging
 
-- Package **`capivaraos-herd-upgrade`** → `/usr/bin/herd-upgrade`.
-- `Requires: dnf5` (system-upgrade built in) and `capivaraos-herd-repos` (ensures the `.repo` file and key are present for the target).
-- Included in the kickstart `%packages` and in the osbuild blueprint.
-- Build: `./rpm/build-rpm-upgrade.sh` → `~/rpmbuild/RPMS/noarch/`.
+- Package `capivaraos-herd-upgrade` installs `/usr/bin/herd-upgrade`.
+- `Requires: dnf5` and `capivaraos-herd-repos` (the `.repo` file and the keys).
+- Included in the kickstart `%packages` and the osbuild blueprint.
+- Build: `./rpm/build-rpm-upgrade.sh`, output in `~/rpmbuild/RPMS/noarch/`.
+
+## Tests
+
+`tests/test-upgrade.sh` runs in a Fedora 45 container. It builds and installs
+the package, checks the argument guards, checks that the pre-flight refuses a
+target with no Herd repository and passes one with a local repository that
+holds `capivaraos-herd-repos`, and checks that `download` stops before dnf when
+the pre-flight fails.

@@ -1,6 +1,6 @@
 #!/bin/sh
 # =============================================================================
-# herd-harden — endurecimento em 1 comando do CapivaraOS HERD (OpenSCAP + Ansible)
+# herd-harden — fortalecimento em 1 comando do CapivaraOS HERD (OpenSCAP + Ansible)
 # =============================================================================
 # Aplica um perfil do SCAP Security Guide (SSG) do Fedora ao sistema, usando os
 # playbooks Ansible que o próprio oscap gera (fix-type ansible). É a contraparte
@@ -48,7 +48,7 @@ resolve_profile() {
 
 usage() {
     cat <<'EOF'
-herd-harden — endurecimento em 1 comando (OpenSCAP + Ansible) / one-command hardening
+herd-harden — fortalecimento em 1 comando (OpenSCAP + Ansible) / one-command hardening
 
   herd-harden [PERFIL]              dry-run: mostra o que mudaria (não altera nada)
   sudo herd-harden [PERFIL] --apply aplica o perfil de verdade
@@ -116,7 +116,7 @@ PLAYBOOK="$(mktemp /tmp/herd-harden-XXXXXX.yml)"
 LOG="/var/log/herd-harden-${TS}.log"
 trap 'rm -f "$PLAYBOOK"' EXIT
 
-echo "==> CapivaraOS HERD — endurecimento por perfil"
+echo "==> CapivaraOS HERD — fortalecimento por perfil"
 echo "    perfil:     ${PROFILE}"
 echo "    datastream: ${DS}"
 echo

@@ -1,0 +1,45 @@
+{
+    // CapivaraOS Herd fastfetch logo.
+    // Replaces the Fedora ASCII logo (which fastfetch picks from ID_LIKE in
+    // os-release) with the brand capybara head + "Herd by CapivaraOS".
+    // Herd identity is navy + white logo, like the brand avatar: silhouette and
+    // name are printed in white (colours 1 and 2), readable on a dark terminal.
+    // The desktop editions use a different colour; do not port these to them.
+    //
+    // Once a config file is loaded, fastfetch prints only what the config
+    // defines: without "modules" it would print the logo and no system
+    // information. The module list is a set for a headless server (no GPU, WM,
+    // DE or desktop theme).
+    //
+    // The artwork goes to /usr/share/capivaraos-herd/fastfetch/ and this config
+    // to /etc/xdg/fastfetch/ (read through XDG_CONFIG_DIRS by any user
+    // without their own ~/.config/fastfetch, including root) and to
+    // /etc/skel/.config/fastfetch/ (new users). No
+    // auto-run: fastfetch only shows when the administrator runs it.
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "file",
+        "source": "/usr/share/capivaraos-herd/fastfetch/capivara.txt",
+        "color": {
+            "1": "38;2;255;255;255",
+            "2": "38;2;255;255;255"
+        }
+    },
+    "modules": [
+        "title",
+        "separator",
+        "os",
+        "host",
+        "kernel",
+        "uptime",
+        "loadavg",
+        "packages",
+        "shell",
+        "cpu",
+        "memory",
+        "swap",
+        "disk",
+        "localip",
+        "locale"
+    ]
+}

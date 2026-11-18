@@ -14,7 +14,7 @@
 # pacote de plugin separado) — por isso a dependência é só `dnf5`.
 
 Name:           capivaraos-herd-upgrade
-Version:        1.0.0
+Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
 Release:        1%{?dist}.herd
@@ -52,6 +52,17 @@ install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/herd-upgrade
 %{_bindir}/herd-upgrade
 
 %changelog
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Thu Nov 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- Rebuild from the current sources. No functional change.
+
+* Mon Sep 21 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45): bump de versão. herd-upgrade já é agnóstico de
+  destino (usa --releasever / atual+1), então serve ao upgrade in-place
+  1.x (F44) -> 2.x (F45) sem mudança de código.
+
 * Mon Aug 31 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de upgrade de versão in-place: ferramenta
   `herd-upgrade`, invólucro auditável do dnf5 system-upgrade (download + reboot

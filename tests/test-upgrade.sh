@@ -1,27 +1,27 @@
 #!/bin/bash
 # =============================================================================
-# Reproducible test for Herd in-place version upgrade.
+# Reproducible test of the Herd in-place version upgrade tool.
 # =============================================================================
-# Prova, isolado num contêiner Fedora 44, a LÓGICA da ferramenta herd-upgrade:
-#   1. o pacote capivaraos-herd-upgrade constrói e instala /usr/bin/herd-upgrade
-#      (puxando capivaraos-herd-repos);
-#   2. --help sai 0; opção inválida e destino <= atual saem != 0 (guardas);
-#   3. FALHA FECHADA: `check` recusa (exit 1) quando o repo assinado do Herd NÃO
-#      existe para a versão de destino — o comportamento de segurança central;
-#   4. LIBERA: com um repo local file:// contendo capivaraos-herd-repos para a
-#      versão de destino, `check` aprova o pré-voo (exit 0);
-#   5. `download` com pré-voo reprovado ABORTA antes de tocar o dnf (não baixa).
+# Checks the LOGIC of herd-upgrade in a Fedora 45 container:
+#   1. capivaraos-herd-upgrade builds and installs /usr/bin/herd-upgrade
+#      (pulling in capivaraos-herd-repos);
+#   2. --help exits 0; an invalid option and a target <= current exit != 0;
+#   3. FAILS CLOSED: `check` refuses (exit 1) when the signed Herd repository
+#      does not exist for the target release, the central safety behaviour;
+#   4. RELEASES: with a local file:// repository holding capivaraos-herd-repos
+#      for the target release, `check` passes the pre-flight (exit 0);
+#   5. `download` with a failed pre-flight stops before touching dnf.
 #
-# A verificação de ASSINATURA (gpgcheck/repo_gpgcheck) é provada em
-# test-repo-signing.sh; aqui o repo local é sem assinatura de propósito, para
-# isolar a lógica de gate/versionamento da ferramenta. Não toca o host.
+# Signature checks (gpgcheck/repo_gpgcheck) are covered by
+# test-repo-signing.sh; the local repository here is unsigned on purpose, to
+# isolate the tool's gate and version logic. Does not touch the host.
 #
-# Requer podman. Uso (a partir da raiz do repo):
+# Requires podman. Usage (from the repository root):
 #   ./tests/test-upgrade.sh
 # =============================================================================
 set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-command -v podman >/dev/null || { echo "ERRO: podman necessário" >&2; exit 1; }
+command -v podman >/dev/null || { echo "ERROR: podman required" >&2; exit 1; }
 
 podman run -i --rm \
     -v "${PROJECT_DIR}/rpm":/src/rpm:ro \
@@ -29,88 +29,91 @@ podman run -i --rm \
     -v "${PROJECT_DIR}/keys":/src/keys:ro \
     -v "${PROJECT_DIR}/upgrade":/src/upgrade:ro \
     --security-opt label=disable \
-    registry.fedoraproject.org/fedora:44 bash -s <<'EOS'
+    registry.fedoraproject.org/fedora:45 bash -s <<'EOS'
 set -euo pipefail; export LC_ALL=C
-ok(){ echo "  [OK] $*"; }; fail(){ echo "  [FALHA] $*"; exit 1; }
-# roda um comando que se ESPERA falhar; ok se exit != 0
-expect_fail(){ if "$@" >/tmp/ef.log 2>&1; then fail "esperava falha e passou: $*"; fi; }
+ok(){ echo "  [OK] $*"; }; fail(){ echo "  [FAIL] $*"; exit 1; }
+# runs a command that is EXPECTED to fail; ok if exit != 0
+expect_fail(){ if "$@" >/tmp/ef.log 2>&1; then fail "expected failure, but it passed: $*"; fi; }
 
 dnf install -y --setopt=install_weak_deps=False rpm-build createrepo_c >/dev/null 2>&1
 mkdir -p ~/rpmbuild/{SOURCES,SPECS}
 CUR="$(rpm -E %fedora)"; TGT=$((CUR + 1))
 
-echo "== 1. build + install do capivaraos-herd-upgrade =="
+echo "== 1. build and install capivaraos-herd-upgrade =="
 install -m0644 /src/repo/capivaraos-herd.repo ~/rpmbuild/SOURCES/
+install -m0644 /src/repo/50-capivaraos-herd-keys.conf ~/rpmbuild/SOURCES/
 install -m0644 /src/keys/RPM-GPG-KEY-capivaraos-herd ~/rpmbuild/SOURCES/
+install -m0644 /src/keys/RPM-GPG-KEY-capivaraos-herd-reserve ~/rpmbuild/SOURCES/
 install -m0755 /src/upgrade/bin/herd-upgrade ~/rpmbuild/SOURCES/
 cp /src/rpm/capivaraos-herd-repos.spec /src/rpm/capivaraos-herd-upgrade.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/capivaraos-herd-repos.spec   >/dev/null 2>&1
 rpmbuild -bb ~/rpmbuild/SPECS/capivaraos-herd-upgrade.spec >/dev/null 2>&1
 REPOS=$(find ~/rpmbuild/RPMS -name 'capivaraos-herd-repos-*.rpm'|head -1)
 UPG=$(find ~/rpmbuild/RPMS -name 'capivaraos-herd-upgrade-*.rpm'|head -1)
-[ -f "$UPG" ] || fail "não construiu capivaraos-herd-upgrade"
-dnf install -y "$REPOS" "$UPG" >/tmp/i.log 2>&1 || { tail -15 /tmp/i.log; fail "install falhou"; }
-[ -x /usr/bin/herd-upgrade ] && ok "/usr/bin/herd-upgrade instalado e executável" || fail "binário ausente"
-rpm -q --requires capivaraos-herd-upgrade | grep -q '^dnf5' && ok "Requires dnf5" || fail "faltou Requires dnf5"
+[ -f "$UPG" ] || fail "capivaraos-herd-upgrade not built"
+dnf install -y "$REPOS" "$UPG" >/tmp/i.log 2>&1 || { tail -15 /tmp/i.log; fail "install failed"; }
+[ -x /usr/bin/herd-upgrade ] && ok "/usr/bin/herd-upgrade installed and executable" || fail "binary missing"
+rpm -q --requires capivaraos-herd-upgrade | grep -q '^dnf5' && ok "Requires dnf5" || fail "Requires dnf5 missing"
 
-echo "== 2. guardas de argumento =="
-herd-upgrade --help >/tmp/h.log 2>&1 && grep -q 'in-place' /tmp/h.log && ok "--help sai 0" || fail "--help"
-expect_fail herd-upgrade --opcao-invalida;             ok "opção inválida recusada"
-expect_fail herd-upgrade --to "$CUR";                  ok "destino == atual recusado"
-expect_fail herd-upgrade --to abc;                     ok "destino não-numérico recusado"
+echo "== 2. argument guards =="
+herd-upgrade --help >/tmp/h.log 2>&1 && grep -q 'in-place' /tmp/h.log && ok "--help exits 0" || fail "--help"
+expect_fail herd-upgrade --invalid-option;             ok "invalid option refused"
+expect_fail herd-upgrade --to "$CUR";                  ok "target == current refused"
+expect_fail herd-upgrade --to abc;                     ok "non-numeric target refused"
 
-echo "== 3. FALHA FECHADA: sem repo do Herd para f$TGT, check recusa =="
-# baseurl file:// inexistente -> gate reprova de forma determinística (sem rede/DNS).
+echo "== 3. FAILS CLOSED: no Herd repository for f$TGT, check refuses =="
+# A file:// baseurl that does not exist: the gate fails deterministically (no network or DNS).
 cat >/etc/yum.repos.d/capivaraos-herd.repo <<'REPO'
 [capivaraos-herd]
-name=CapivaraOS Herd teste (ausente) $releasever
-baseurl=file:///srv/repo-inexistente/herd/f$releasever/$basearch/stable/
+name=CapivaraOS Herd test (missing) $releasever
+baseurl=file:///srv/repo-missing/herd/f$releasever/$basearch/stable/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 REPO
 if herd-upgrade check --to "$TGT" >/tmp/c1.log 2>&1; then
-  cat /tmp/c1.log; fail "check deveria ter recusado (repo ausente)"
+  cat /tmp/c1.log; fail "check should have refused (repository missing)"
 fi
-grep -qi 'AUSENTE' /tmp/c1.log && ok "check reprova o pré-voo (repo Herd ausente p/ f$TGT)" \
-  || { cat /tmp/c1.log; fail "esperava relato de repo AUSENTE"; }
+# herd-upgrade reports in Portuguese: AUSENTE = missing.
+grep -qi 'AUSENTE' /tmp/c1.log && ok "check fails the pre-flight (no Herd repository for f$TGT)" \
+  || { cat /tmp/c1.log; fail "expected a missing-repository report"; }
 
-echo "== 4. LIBERA: repo local file:// com capivaraos-herd-repos p/ f$TGT =="
+echo "== 4. RELEASES: local file:// repository with capivaraos-herd-repos for f$TGT =="
 ARCH="$(rpm -E %{_arch})"
 REPO_ROOT="/srv/repo/herd/f${TGT}/${ARCH}/stable"
 mkdir -p "$REPO_ROOT"; cp "$REPOS" "$REPO_ROOT/"
 createrepo_c "$REPO_ROOT" >/dev/null 2>&1
-# .repo de teste (sem gpg — a assinatura é coberta por test-repo-signing.sh),
-# baseurl com $releasever/$basearch resolvendo para o repo local.
+# Test .repo (no gpg; signatures are covered by test-repo-signing.sh), with a
+# baseurl whose $releasever/$basearch resolve to the local repository.
 cat >/etc/yum.repos.d/capivaraos-herd.repo <<REPO
 [capivaraos-herd]
-name=CapivaraOS Herd teste \$releasever
+name=CapivaraOS Herd test \$releasever
 baseurl=file:///srv/repo/herd/f\$releasever/\$basearch/stable/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 REPO
 if herd-upgrade check --to "$TGT" >/tmp/c2.log 2>&1; then
-  grep -qi 'Pronto para upgrade' /tmp/c2.log && ok "check aprova com repo presente p/ f$TGT" \
-    || { cat /tmp/c2.log; fail "aprovou mas sem a mensagem esperada"; }
+  grep -qi 'Pronto para upgrade' /tmp/c2.log && ok "check passes with the repository present for f$TGT" \
+    || { cat /tmp/c2.log; fail "passed, but without the expected message"; }
 else
-  cat /tmp/c2.log; fail "check deveria aprovar (repo presente)"
+  cat /tmp/c2.log; fail "check should pass (repository present)"
 fi
 
-echo "== 5. download aborta quando o pré-voo reprova (não toca o dnf) =="
-# Aponta o repo p/ caminho inexistente (enabled=0 não bastaria: --repo força o
-# enable). Assim o pré-voo reprova e o download deve abortar ANTES de tocar o dnf.
+echo "== 5. download stops when the pre-flight fails (dnf untouched) =="
+# Point the repository at a missing path (enabled=0 would not do: --repo forces
+# it on). The pre-flight then fails and download must stop BEFORE touching dnf.
 cat >/etc/yum.repos.d/capivaraos-herd.repo <<'REPO'
 [capivaraos-herd]
-name=CapivaraOS Herd teste (ausente) $releasever
-baseurl=file:///srv/repo-inexistente/herd/f$releasever/$basearch/stable/
+name=CapivaraOS Herd test (missing) $releasever
+baseurl=file:///srv/repo-missing/herd/f$releasever/$basearch/stable/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
 REPO
 expect_fail herd-upgrade download --to "$TGT" --yes
-grep -qi 'pré-voo reprovado\|Upgrade abortado' /tmp/ef.log && ok "download abortou no pré-voo (sem baixar)" \
-  || { cat /tmp/ef.log; fail "esperava aborto no pré-voo"; }
+grep -qi 'pré-voo reprovado\|Upgrade abortado' /tmp/ef.log && ok "download stopped at the pre-flight (nothing downloaded)" \
+  || { cat /tmp/ef.log; fail "expected a stop at the pre-flight"; }
 
-echo; echo "== RESULT: OK (build+install + guards + fail-closed + allow + safe abort) =="
+echo; echo "== RESULT: upgrade OK (build+install, guards, fail-closed, release, safe stop) =="
 EOS

@@ -1,29 +1,29 @@
 name = "capivaraos-herd"
-description = "Herd by CapivaraOS Community — servidor headless, base Fedora 44"
-version = "1.0.1"
+description = "Herd by CapivaraOS Community: headless server, Fedora 45 base"
+version = "2.0.0"
+# Fedora 45 base. osbuild-composer composes for this distro whatever the host
+# release (it ships fedora-45.json in /usr/share/osbuild-composer/repositories/),
+# so an F44 host builds an F45 image natively, with no mock or container.
+distro = "fedora-45"
 
 # =============================================================================
-# CapivaraOS HERD Community 1.0.0 — blueprint osbuild / Image Builder
+# CapivaraOS Herd: osbuild / Image Builder blueprint
 # =============================================================================
-# Single source of truth for the build. From this blueprint
-# build.sh produces TWO images:
-#   - qcow2            (nuvem/VM, com cloud-init)
-#   - image-installer  (ISO instalador headless para bare-metal/VM)
-# para x86_64 e aarch64 (um builder osbuild por arquitetura).
-#
-# Herd 1.x is based on Fedora 44, the same generation as the desktop spins
-# (Marsh/Pup/Snout 1.x).
+# Single source of truth for the image build. From this blueprint build.sh
+# produces TWO images:
+#   - qcow2            (cloud/VM, with cloud-init)
+#   - image-installer  (headless installer ISO for bare metal/VM)
+# for the host architecture (x86_64 tested).
 # =============================================================================
 
-# ── Herd visual identity (own RPM) ────────────────────────────────────────────
-# Pulled from a custom composer source that serves only the Herd RPM (see
-# build.sh and rpm/), so branding from another spin with the same NEVRA cannot
-# be picked up.
+# ── Herd identity (project RPM) ─────────────────────────────────────────────
+# Comes from a custom composer source that points ONLY at the Herd RPM (see
+# build.sh and rpm/), so branding from another spin cannot be pulled in.
 [[packages]]
 name = "capivaraos-herd-branding"
 version = "*"
 
-# ── Núcleo de servidor ──────────────────────────────────────────────────────
+# ── Server core ─────────────────────────────────────────────────────────────
 [[packages]]
 name = "cloud-init"
 version = "*"
@@ -44,15 +44,44 @@ version = "*"
 name = "chrony"
 version = "*"
 
-# Cockpit: web administration UI (services, network, storage, updates,
-# in-browser terminal) at https://<ip>:9090. cockpit.socket is socket-activated
-# (nothing runs until port 9090 is accessed); the port is opened in firewalld below.
+# Cockpit: web administration UI (services, network, storage, updates, terminal
+# in the browser) at https://<ip>:9090. cockpit.socket is socket-activated (it
+# does not run until port 9090 is accessed); the port is opened in firewalld
+# below.
 [[packages]]
 name = "cockpit"
 version = "*"
 
-# glibc-langpack-pt para que pt_BR.UTF-8 exista na imagem (server mínimo não
-# traz todos os langpacks como o glibc-all-langpacks dos lives de desktop).
+# The Storage, Networking and Software updates pages are weak dependencies of
+# cockpit, and the image builds do not install weak dependencies, so they are
+# listed here (same list in the kickstart).
+[[packages]]
+name = "cockpit-storaged"
+version = "*"
+
+[[packages]]
+name = "cockpit-networkmanager"
+version = "*"
+
+[[packages]]
+name = "cockpit-packagekit"
+version = "*"
+
+# systemd-pam and kmscon: weak dependencies, listed because the image has
+# no weak dependencies. systemd-pam gives each login a user session, which
+# Cockpit needs to switch to administrative access with a password. kmscon
+# shows the login prompt on the screen: Fedora 45 uses it in place of getty
+# on the virtual consoles.
+[[packages]]
+name = "systemd-pam"
+version = "*"
+
+[[packages]]
+name = "kmscon"
+version = "*"
+
+# glibc-langpack-pt so that pt_BR.UTF-8 exists in the image (a minimal server
+# does not carry every langpack the way glibc-all-langpacks does on desktops).
 [[packages]]
 name = "glibc-langpack-pt"
 version = "*"
@@ -61,41 +90,50 @@ version = "*"
 name = "glibc-langpack-en"
 version = "*"
 
-# ── Basic security profile ────────────────────────────────────────────────────
-# Ships hardened SSH, password policy (pwquality), umask 027, audit rules,
-# herd-compliance-scan and herd-harden. Single source for both images. Pulls in
-# openscap-scanner and ships the Fedora SCAP datastream (not the full
+# fastfetch: terminal system summary with the brand logo. Artwork and config
+# come from capivaraos-herd-branding; no auto-run (only when the administrator
+# runs `fastfetch`).
+[[packages]]
+name = "fastfetch"
+version = "*"
+
+# ── Baseline security profile ───────────────────────────────────────────────
+# Delivers hardened SSH, password policy (pwquality), umask 027 and
+# herd-compliance-scan (OpenSCAP). Single source for both images. Pulls in
+# openscap-scanner and ships the Fedora SSG datastream (not the
 # scap-security-guide package).
 [[packages]]
 name = "capivaraos-herd-hardening"
 version = "*"
 
-# ── Signed update repository ──────────────────────────────────────────────────
-# Installs /etc/yum.repos.d/capivaraos-herd.repo and the public GPG key so the
-# INSTALLED system receives the project's own packages, not only Fedora's.
-# Do not publish an image with this package before repo.capivaraos.org/herd/
-# is online (see docs/repo/README.md).
+# ── Signed update repository ────────────────────────────────────────────────
+# Installs /etc/yum.repos.d/capivaraos-herd.repo and the public signing keys so
+# the INSTALLED system receives the project's own packages, not only Fedora's.
+# Do not publish an image with this package before the update repository is
+# online (see docs/repo/README.md).
 [[packages]]
 name = "capivaraos-herd-repos"
 version = "*"
 
-# ── Automatic security updates ────────────────────────────────────────────────
-# Política do dnf5 automatic (aplica só updates de segurança, sem auto-reboot).
-# Puxa dnf5-plugin-automatic; o timer é habilitado em [customizations.services].
+# ── Automatic security updates ──────────────────────────────────────────────
+# dnf5 automatic policy (applies security updates only, no automatic reboot).
+# Pulls in dnf5-plugin-automatic; the timer is enabled in
+# [customizations.services].
 [[packages]]
 name = "capivaraos-herd-autoupdate"
 version = "*"
 
-# ── In-place version upgrade ──────────────────────────────────────────────────
-# Ferramenta `herd-upgrade`: invólucro auditável do dnf5 system-upgrade para
-# subir de versão sem formatar. Só entrega o comando (o upgrade é disparado pelo
-# admin); o pré-voo falha fechado enquanto herd/f<destino>/ não estiver no ar.
+# ── In-place version upgrade ────────────────────────────────────────────────
+# `herd-upgrade`: an auditable wrapper around dnf5 system-upgrade to move to a
+# new version without reinstalling. Only ships the command (the administrator
+# starts the upgrade); its pre-flight check fails closed while the target
+# release is not in the update repository.
 [[packages]]
 name = "capivaraos-herd-upgrade"
 version = "*"
 
 # =============================================================================
-# CUSTOMIZAÇÕES
+# CUSTOMIZATIONS
 # =============================================================================
 [customizations]
 hostname = "capivaraos-herd"
@@ -108,24 +146,33 @@ keyboard = "br-abnt2"
 timezone = "America/Sao_Paulo"
 ntpservers = ["pool.ntp.br"]
 
-# ── Firewall (hardening) ────────────────────────────────────────────────────
-# Libera SSH + Cockpit (9090). Remove o mdns (descoberta avahi — superfície
-# desnecessária num servidor). MANTÉM o dhcpv6-client: é serviço de CLIENTE
-# (recebe respostas DHCPv6); removê-lo quebraria o endereçamento IPv6 em redes
-# que usam DHCPv6. Resultado da zona public: ssh, cockpit, dhcpv6-client.
+# ── Firewall ────────────────────────────────────────────────────────────────
+# Opens SSH and Cockpit (9090). Removes mdns (avahi discovery, needless surface
+# on a server). KEEPS dhcpv6-client: it is a CLIENT service (receives DHCPv6
+# replies); removing it would break IPv6 addressing on networks that use
+# DHCPv6. Resulting public zone: ssh, cockpit, dhcpv6-client.
 [customizations.firewall.services]
 enabled = ["ssh", "cockpit"]
 disabled = ["mdns"]
 
-# ── Serviços habilitados ────────────────────────────────────────────────────
-# cloud-init stays enabled in the base image; on bare metal without a
-# datasource it effectively does nothing.
-# NB: no Fedora 44 não existe mais "cloud-init.service" — o pacote orquestra o
-# ciclo (local/network/config/final) via cloud-init.target. Habilitar o alvo
-# é a forma canônica; pedir "cloud-init" falha ("Unit does not exist").
+# ── Enabled services ────────────────────────────────────────────────────────
+# cloud-init stays enabled; on bare metal with no datasource it does
+# essentially nothing.
+# Fedora 45 has no "cloud-init.service": the package drives its stages
+# (local/network/config/final) through cloud-init.target. Enabling the target
+# is the canonical way; asking for "cloud-init" fails ("Unit does not exist").
 [customizations.services]
 enabled = ["sshd", "firewalld", "chronyd", "cloud-init.target", "cockpit.socket", "dnf5-automatic.timer"]
 
-# ── Hardened SSH ──────────────────────────────────────────────────────────────
-# Provided by capivaraos-herd-hardening
-# (/etc/ssh/sshd_config.d/50-capivaraos-herd.conf). Do not duplicate here.
+# ── Persistent kernel arguments (hardening) ─────────────────────────────────
+# audit_backlog_limit=8192 (SSG rule grub2_audit_backlog_limit_argument) gives
+# the audit buffer room during early boot, before auditd starts. The ISO path
+# gets it from the kickstart (bootloader --append); this is the equivalent for
+# the osbuild/qcow2 path. osbuild writes it to the persistent kernelopts, so it
+# applies on first boot AND is inherited by new kernels.
+[customizations.kernel]
+append = "audit_backlog_limit=8192"
+
+# ── Hardened SSH ────────────────────────────────────────────────────────────
+# Comes from capivaraos-herd-hardening. Do not duplicate it here: the drop-in
+# /etc/ssh/sshd_config.d/50-capivaraos-herd.conf is shipped by that RPM.

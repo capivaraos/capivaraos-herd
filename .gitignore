@@ -16,3 +16,6 @@
 *.private.asc
 keys/*secret*
 keys/*.sec.asc
+
+# Python bytecode
+__pycache__/
