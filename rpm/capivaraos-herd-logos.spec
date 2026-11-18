@@ -14,7 +14,7 @@ Name:           capivaraos-herd-logos
 Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Identidade do instalador (Anaconda) do CapivaraOS HERD
 
 # The logo is a trademark of the project (see TRADEMARK.md), not an open licence.
@@ -82,14 +82,15 @@ install -m 0644 splash.png syslinux-splash.png %{buildroot}%{_datadir}/anaconda/
 %{_datadir}/anaconda/boot/syslinux-splash.png
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Comments and changelog text revised. No functional change.
+
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
 - Herd 2.0.0 release. No functional change.
 
 * Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
-- Geração 2.x (Fedora 45). Nenhuma mudança de arte: o
-  fedora-logos do F45 continua Version 42.0.1, então os Provides
-  system-logos/redhat-logos/fedora-logos = 42.0.1 seguem casando com o virtual
-  que o Anaconda exige. Só bump de versão para a série 2.x (0.1.alpha1).
+- Geração 2.x (Fedora 45). Nenhuma mudança de arte; só bump de versão para a
+  série 2.x (0.1.alpha1).
 
 * Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
 - Remove Obsoletes fedora-logos (causava "conflicting requests" no lorax com o

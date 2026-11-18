@@ -17,7 +17,7 @@ Name:           capivaraos-herd-repos
 Version:        2.0.0
 # ".herd" suffix, as in branding, hardening and logos: keeps the NEVRA apart
 # from the other editions' packages in a shared ~/rpmbuild.
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Signed update repository configuration for CapivaraOS Herd
 
 # Our configuration and our public keys only. GPLv3 covers the configuration;
@@ -65,6 +65,9 @@ install -D -m 0644 %{SOURCE3} \
 %{_prefix}/lib/systemd/system/dnf5-automatic.service.d/50-capivaraos-herd-keys.conf
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Changelog text revised. No functional change.
+
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
 - Herd 2.0.0 release. No functional change.
 
@@ -76,8 +79,7 @@ install -D -m 0644 %{SOURCE3} \
   unattended run: into the rpm keyring, and through a makecache of the two
   Herd repositories into dnf5's key store for metadata checks (a step that
   can fail without stopping the run).
-- %%post no longer tries to import the keys; rpm refuses key imports from a
-  scriptlet.
+- %%post no longer imports the keys; the dnf5-automatic drop-in does it.
 
 * Sun Nov 15 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.3.alpha1.herd
 - No functional change to the repository configuration.
@@ -88,9 +90,7 @@ install -D -m 0644 %{SOURCE3} \
   system upgrade.
 
 * Mon Sep 21 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
-- Geração 2.x (Fedora 45): bump de versão. baseurl usa
-  $releasever (via system-release), então o repo acompanha sozinho o system-upgrade
-  F44->F45 — sem mudança funcional.
+- Geração 2.x (Fedora 45): bump de versão; o baseurl usa $releasever.
 
 * Sat Aug 29 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de configuração de repositório: instala o

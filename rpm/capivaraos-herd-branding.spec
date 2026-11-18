@@ -9,7 +9,7 @@ Name:           capivaraos-herd-branding
 Version:        2.0.0
 # ".herd" suffix, as in the other Herd packages: keeps the NEVRA apart from
 # the other editions' packages in a shared ~/rpmbuild.
-Release:        2%{?dist}.herd
+Release:        3%{?dist}.herd
 Summary:        Identidade (os-release, issue, motd, Cockpit) do CapivaraOS HERD Community
 
 # Code (os-release/issue/motd, BLS script) under GPLv3; the Cockpit logo artwork
@@ -174,12 +174,14 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 %{_sysconfdir}/xdg/fastfetch/
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-3.herd
+- Changelog text revised. No functional change.
+
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
-- os-release VERSION_ID is the Fedora release (45), so the Cockpit "Software
-  updates" page reaches the Fedora mirrors. The Herd version stays in VERSION,
-  PRETTY_NAME and CPE_NAME, and the Cockpit login card shows VERSION.
-- The Cockpit Software updates page has no docs.redhat.com link in its Help
-  menu, like the other pages.
+- os-release VERSION_ID is the Fedora release (45). The Herd version stays in
+  VERSION, PRETTY_NAME and CPE_NAME.
+- A Cockpit manifest override for packagekit removes its docs.redhat.com Help
+  link, as for the other Cockpit packages.
 
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
 - Herd 2.0.0 release: os-release names the release "2.0.0 (Community)".
@@ -198,7 +200,7 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
 - fastfetch: config.jsonc passa a listar "modules" (conjunto de
   servidor) — sem isso, nesta versão do fastfetch um config carregado imprimia SÓ
   o logo, sem as infos do sistema. Cor do logo (silhueta + nome) -> BRANCA.
-  Validado em VM.
+  Testado em VM.
 
 * Tue Oct 13 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
 - Logo próprio do CapivaraOS no fastfetch: o painel ASCII do
@@ -209,12 +211,12 @@ sh %{_datadir}/capivaraos-herd/fix-bls-titles.sh 2>/dev/null || true
   todos os usuários via XDG_CONFIG_DIRS, sem precisar configurar) e em
   /etc/skel/.config/fastfetch/ (novos usuários). SEM auto-run — aparece só quando
   o admin roda `fastfetch` (pacote fastfetch adicionado ao payload no
-  kickstart/blueprint). Mesmo padrão dos desktops.
+  kickstart/blueprint).
 - O config.jsonc lista os "modules" (conjunto voltado a servidor: os/host/kernel/
   uptime/load/packages/shell/cpu/memory/swap/disk/localip/locale): sem a chave o
   fastfetch imprimiria SÓ o logo (nesta versão um config carregado define todo o
   output). A silhueta da capivara usa a cor da marca (verde #15B22C), não a cor
-  default do fastfetch. Validado em VM (render com logo verde + infos do sistema).
+  default do fastfetch. Testado em VM (render com logo verde + infos do sistema).
 
 * Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
 - Início da geração 2.x (rebase para Fedora 45). os-release/issue/motd para

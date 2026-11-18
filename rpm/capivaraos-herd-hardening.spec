@@ -28,7 +28,7 @@ Name:           capivaraos-herd-hardening
 Version:        2.0.0
 # ".herd" suffix: same convention as branding/logos (avoids NEVRA
 # collisions in a shared ~/rpmbuild).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -73,7 +73,7 @@ Requires:       crypto-policies-scripts
 Provides:       system-hardening-config = %{version}-%{release}
 
 %description
-Perfil básico de segurança do CapivaraOS HERD: SSH fortalecido,
+Perfil básico de segurança do CapivaraOS HERD Community: SSH fortalecido,
 política de qualidade de senha (pwquality), umask restritivo em sessões de
 login e os utilitários herd-compliance-scan (relatório de conformidade
 OpenSCAP, perfil "standard" do SCAP Security Guide do Fedora) e herd-harden
@@ -185,22 +185,22 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Package description names the edition (Community); changelog text revised.
+  No functional change.
+
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
 - Herd 2.0.0 release. No functional change.
 
 * Tue Nov 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
-- Terminologia: "fortalecimento" no lugar de "endurecimento" em todo o
-  pacote, incluindo o %description (o texto que o dnf info mostra) e a saída do
-  herd-harden (--help e banner). A documentação oficial já usava "fortalecimento";
-  a ferramenta imprimia outra palavra para o mesmo recurso.
-- Comentários do pacote e do pwquality.conf.d reescritos. Sem mudança de
-  comportamento — só texto.
+- herd-harden (banner and --help) and the package description use the
+  Portuguese term "fortalecimento" for hardening.
+- Comment-only changes in the spec and in pwquality.conf.d. No change in
+  behaviour.
 
 * Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
 - Geração 2.x (Fedora 45): datastream SSG vendorado atualizado para o do
-  Fedora 45 (scap-security-guide 0.1.82, gerado 2026-09-02). Mesmo conjunto de
-  perfis (standard/ospp/cis/cis_server_l1/pci-dss/…); PCI segue v3.2.1 e CIS
-  segue como rascunho no SSG. Licença BSD-3 do SSG inalterada.
+  Fedora 45 (gerado 2026-09-02). Licença BSD-3 do SSG inalterada.
 
 * Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-11.herd
 - Requires: crypto-policies-scripts (~390 KiB) — garante o update-crypto-policies

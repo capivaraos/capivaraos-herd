@@ -18,7 +18,7 @@ Name:           capivaraos-herd-autoupdate
 Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Atualização automática de segurança (dnf5 automatic) do CapivaraOS Herd
 
 License:        GPL-3.0-or-later
@@ -63,6 +63,9 @@ fi
 %{_datadir}/%{name}/automatic.conf
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Package description and changelog text revised. No functional change.
+
 * Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
 - Herd 2.0.0 release. No functional change.
 
