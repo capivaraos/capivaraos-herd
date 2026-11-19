@@ -1,31 +1,31 @@
 #!/bin/sh
 # =============================================================================
-# herd-harden — endurecimento em 1 comando do CapivaraOS HERD (OpenSCAP + Ansible)
+# herd-harden: one-command hardening for CapivaraOS HERD (OpenSCAP + Ansible)
 # =============================================================================
-# Aplica um perfil do SCAP Security Guide (SSG) do Fedora ao sistema, usando os
-# playbooks Ansible que o próprio oscap gera (fix-type ansible). É a contraparte
-# "aplicar" do herd-compliance-scan (que só relata).
+# Applies a Fedora SCAP Security Guide (SSG) profile to the system, using the
+# Ansible playbooks that oscap itself generates (fix-type ansible). It is the
+# "apply" counterpart of herd-compliance-scan, which only reports.
 #
-# SEGURANÇA: por padrão roda em DRY-RUN (ansible-playbook --check --diff) e NÃO
-# altera nada. Só aplica de verdade com --apply, explícito.
+# SAFETY: runs as a DRY-RUN by default (ansible-playbook --check --diff) and
+# changes NOTHING. It applies only with an explicit --apply.
 #
-# Uso:
-#   herd-harden [PERFIL]            # dry-run: mostra o que mudaria (padrão)
-#   sudo herd-harden [PERFIL] --apply   # aplica de verdade
-#   herd-harden --list             # lista os perfis disponíveis
+# Usage:
+#   herd-harden [PROFILE]               # dry-run: shows what would change (default)
+#   sudo herd-harden [PROFILE] --apply  # applies the profile
+#   herd-harden --list                  # lists the available profiles
 #   herd-harden --help
 #
-# PERFIL aceita um apelido amigável ou o id técnico completo do SSG:
-#   standard   (padrão)  -> baseline do HERD Community
-#   ospp                 -> Protection Profile (NIAP/CC) — perfil "oficial"
-#   cis-l1               -> CIS Fedora Nível 1 Servidor (rascunho SSG)
-#   cis-l2  (ou cis)     -> CIS Fedora Nível 2 Servidor (rascunho SSG)
-#   pci     (ou pci-dss) -> PCI-DSS v3.2.1
+# PROFILE accepts a short alias or the full SSG profile id:
+#   standard   (default) -> HERD Community baseline
+#   ospp                 -> Protection Profile (NIAP/CC)
+#   cis-l1               -> CIS Fedora Level 1 Server (SSG, unofficial)
+#   cis-l2  (or cis)     -> CIS Fedora Level 2 Server (SSG, unofficial)
+#   pci     (or pci-dss) -> PCI-DSS v3.2.1
 #
-# Observação de conformidade: os perfis CIS aqui são os RASCUNHOS do SSG para
-# Fedora (o CIS não publica benchmark oficial de Fedora); não há perfil STIG
-# para Fedora (use ospp como baseline DoD-adjacente). O HERD entrega os
-# controles e a evidência — "pronto para conformidade", nunca "certificado".
+# Compliance note: the CIS profiles here are the SSG's own versions for Fedora (CIS
+# publishes no official Fedora benchmark); there is no STIG profile for
+# Fedora (use ospp as a DoD-adjacent baseline). HERD Community delivers the
+# controls and the evidence: "compliance-ready", never "certified".
 # =============================================================================
 set -eu
 
@@ -48,7 +48,7 @@ resolve_profile() {
 
 usage() {
     cat <<'EOF'
-herd-harden — endurecimento em 1 comando (OpenSCAP + Ansible) / one-command hardening
+herd-harden — fortalecimento em 1 comando (OpenSCAP + Ansible) / one-command hardening
 
   herd-harden [PERFIL]              dry-run: mostra o que mudaria (não altera nada)
   sudo herd-harden [PERFIL] --apply aplica o perfil de verdade
@@ -64,7 +64,7 @@ Without --apply, runs in Ansible check mode: safe, changes nothing.
 EOF
 }
 
-# ---- descoberta do datastream (mesmo critério do herd-compliance-scan) -------
+# ---- datastream discovery (same rule as herd-compliance-scan) ----------------
 if [ -r "$DS_STD" ]; then
     DS="$DS_STD"
 elif [ -r "$DS_VENDORED" ]; then
@@ -75,7 +75,7 @@ else
     exit 1
 fi
 
-# ---- parse de argumentos -----------------------------------------------------
+# ---- argument parsing --------------------------------------------------------
 APPLY=0
 PROFILE_IN=""
 for a in "$@"; do
@@ -101,27 +101,27 @@ PROFILE="$(resolve_profile "$PROFILE_IN")" || {
     exit 2
 }
 
-# ---- dependências ------------------------------------------------------------
+# ---- dependencies ------------------------------------------------------------
 command -v oscap >/dev/null 2>&1 || {
     echo "erro: 'oscap' não encontrado. Instale: dnf install openscap-scanner" >&2; exit 1; }
 command -v ansible-playbook >/dev/null 2>&1 || {
     echo "erro: 'ansible-playbook' não encontrado. Instale: dnf install ansible-core" >&2; exit 1; }
 
-# Tanto o --check quanto o --apply inspecionam/alteram arquivos de sistema: root.
+# Both --check and --apply read or change system files: needs root.
 [ "$(id -u)" -eq 0 ] || { echo "erro: rode como root (sudo herd-harden ...)." >&2; exit 1; }
 
-# ---- geração do playbook de remediação (on-demand, a partir do datastream) ---
+# ---- remediation playbook (generated on demand from the datastream) ----------
 TS="$(date +%Y%m%d-%H%M%S)"
 PLAYBOOK="$(mktemp /tmp/herd-harden-XXXXXX.yml)"
 LOG="/var/log/herd-harden-${TS}.log"
 trap 'rm -f "$PLAYBOOK"' EXIT
 
-echo "==> CapivaraOS HERD — endurecimento por perfil"
+echo "==> CapivaraOS HERD — fortalecimento por perfil"
 echo "    perfil:     ${PROFILE}"
 echo "    datastream: ${DS}"
 echo
 
-# oscap sai com 1 se não houver o que remediar; não é erro fatal para nós.
+# oscap exits 1 when there is nothing to remediate; not a fatal error here.
 oscap xccdf generate fix --fix-type ansible --profile "$PROFILE" \
     --output "$PLAYBOOK" "$DS" || true
 if [ ! -s "$PLAYBOOK" ]; then
@@ -129,7 +129,7 @@ if [ ! -s "$PLAYBOOK" ]; then
     exit 1
 fi
 
-# Inventário local: aplica na própria máquina, sem SSH.
+# Local inventory: applies to this machine, without SSH.
 AP_ARGS="-i localhost, -c local -e ansible_python_interpreter=/usr/bin/python3"
 
 # shellcheck disable=SC2086
@@ -139,9 +139,9 @@ if [ "$APPLY" -eq 1 ]; then
     echo
     ansible-playbook $AP_ARGS "$PLAYBOOK" 2>&1 | tee "$LOG"
     echo
-    # Aviso de acesso: perfis altos (ospp/cis) trocam a crypto-policy do sistema
-    # p/ FIPS, o que INVALIDA chaves SSH ed25519 e cifras fora do conjunto FIPS —
-    # um login novo pode ser recusado. Mostra a política atual e pede confirmação.
+    # Access warning: stricter profiles (ospp/cis) switch the system crypto-policy
+    # to FIPS mode, which INVALIDATES ed25519 SSH keys and ciphers outside the
+    # FIPS set; a new login may be refused. Shows the current policy and asks first.
     POL="$(update-crypto-policies --show 2>/dev/null || true)"
     cat <<EOF
 

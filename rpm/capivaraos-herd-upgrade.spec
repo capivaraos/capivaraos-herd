@@ -14,10 +14,10 @@
 # pacote de plugin separado) — por isso a dependência é só `dnf5`.
 
 Name:           capivaraos-herd-upgrade
-Version:        1.0.0
+Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
-Release:        1%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Upgrade de versão in-place (dnf5 system-upgrade) do CapivaraOS Herd
 
 License:        GPL-3.0-or-later
@@ -40,10 +40,10 @@ próxima versão SEM formatar, usando a transação offline do dnf5
 (`dnf5 system-upgrade`). Segue a marca de auditabilidade: por padrão só faz
 verificação (pré-voo); baixar e reiniciar são passos explícitos e separados; o
 pré-voo FALHA FECHADA se o repositório assinado do Herd ainda não existir para a
-versão de destino (para não deixar os pacotes do Herd para trás); e cria snapshot
-antes do upgrade quando o storage é compatível (snapper/btrfs). A confiança vem
-da assinatura GPG do repositório (gpgcheck + repo_gpgcheck): a transação recusa
-pacote ou metadado não assinado pela nossa chave.
+versão de destino (para não deixar os pacotes do Herd para trás); e, se o
+administrador tiver configurado o Snapper numa raiz btrfs, tira um snapshot
+antes do download (o Herd não instala o Snapper; nos demais casos, faça backup).
+O repositório do Herd é configurado com gpgcheck e repo_gpgcheck.
 
 %install
 install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/herd-upgrade
@@ -52,6 +52,19 @@ install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/herd-upgrade
 %{_bindir}/herd-upgrade
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Package description and changelog text revised. No functional change.
+
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Thu Nov 12 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- Rebuild from the current sources. No functional change.
+
+* Mon Sep 21 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45): bump de versão; o destino vem de --releasever /
+  atual+1.
+
 * Mon Aug 31 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de upgrade de versão in-place: ferramenta
   `herd-upgrade`, invólucro auditável do dnf5 system-upgrade (download + reboot

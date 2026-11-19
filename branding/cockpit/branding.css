@@ -1,39 +1,42 @@
-/* SPDX-License-Identifier: CC-BY-SA-4.0 */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Cockpit (web console) branding for Herd by CapivaraOS.
  *
- * Identidade VERDE (cor do site capivaraos.org): --color-green #2f7a3d,
- * --color-green-dark #1d4f27, --color-green-darker #163d1e.
+ * Herd uses the navy identity of the brand avatar: navy #1E2F4E background
+ * with the white capybara logo. The desktop editions use a different palette;
+ * do not port these colours to them.
  *
- * O Cockpit escolhe este diretório pelo ID do /etc/os-release (capivaraos-herd);
- * se ausente, cairia para a cadeia ID_LIKE ("fedora rhel") e depois "default".
- * ${VAR} são substituídos em runtime a partir do /etc/os-release, e o conteúdo
- * de #brand é injetado como HTML (por isso <b> funciona). Este CSS é carregado
- * tanto na tela de login quanto no shell interno. */
+ * Cockpit picks this directory from ID in /etc/os-release (capivaraos-herd);
+ * without it, it falls back to the ID_LIKE chain ("fedora rhel"), then
+ * "default". ${VAR} is replaced at runtime from /etc/os-release, and the
+ * content of #brand is injected as HTML (hence <b> works). This CSS is loaded
+ * both on the login page and inside the shell. */
 
 :root {
-    /* Cor de destaque do host (barra do shell interno) = verde da marca. */
-    --ct-color-host-accent: #2f7a3d !important;
+    /* Host accent colour (shell top bar): brand navy. */
+    --ct-color-host-accent: #1E2F4E !important;
 }
 
-/* ── Tela de login ──────────────────────────────────────────────────────── */
-/* Fundo verde da marca por trás do cartão branco de login. */
+/* ── Login page ─────────────────────────────────────────────────────────── */
+/* Brand navy behind the white login card. */
 body.login-pf {
-    background: #2f7a3d !important;
+    background: #1E2F4E !important;
     background-image: none !important;
 }
 
-/* Badge: nosso logo (tile verde-escuro + capivara branca), gerado no %build.
- * Proporção casa com o asset 640x360 (~1.78:1); background-size: contain
- * garante que a logo apareça inteira, sem corte. */
+/* Badge: the brand avatar (navy square + white capybara + "CapivaraOS"),
+ * generated in %build from src/avatar-navy-branca.png. The avatar background
+ * is the same navy as the page, so its edge disappears and only the white
+ * logo shows. Square, so inline-size == block-size. */
 #badge {
-    inline-size: 240px;
-    block-size: 135px;
+    inline-size: 170px;
+    block-size: 170px;
     background-image: url("logo.png");
     background-size: contain;
     background-repeat: no-repeat;
 }
 
-/* Título dentro do cartão: "Herd <versão>" (${NAME} vem do os-release). */
+/* Title inside the card: "Herd <version>" (${NAME} and ${VERSION} come from
+   os-release; VERSION_ID is the Fedora release, not the Herd version). */
 #brand::before {
-    content: "${NAME} <b>${VERSION_ID}</b>";
+    content: "${NAME} <b>${VERSION}</b>";
 }

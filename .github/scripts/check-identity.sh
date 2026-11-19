@@ -4,7 +4,7 @@ set -euo pipefail
 # shellcheck source=common.sh disable=SC1091
 . "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-allowed='^(capivaraos-bot@users\.noreply\.github\.com|[0-9]+\+capivaraos@users\.noreply\.github\.com|noreply@github\.com)$'
+allowed='^(capivaraos-bot@users\.noreply\.github\.com|[0-9]+\+capivaraos(-bot)?@users\.noreply\.github\.com|noreply@github\.com)$'
 bad=0
 for c in $(commits); do
     for e in "$(git log -1 --format=%ae "$c")" "$(git log -1 --format=%ce "$c")"; do

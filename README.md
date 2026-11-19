@@ -1,51 +1,51 @@
 # Herd by CapivaraOS
 
-Linha de **servidor** do CapivaraOS. Este repositório contém a infraestrutura de
-build das imagens do **Herd Community**, com base **Fedora 44** — a mesma
-geração das spins de desktop (Marsh/Pup/Snout 1.x).
+Herd is the **server** line of CapivaraOS. This repository builds the
+**Herd Community** images, based on **Fedora 45**.
 
-## Como funcionam os releases (o que é estável)
+## Releases (what is stable)
 
-Este repositório se desenvolve **em aberto**: a branch `main` recebe trabalho
-contínuo e **não é um release**. Não coloque um servidor em produção compilando
-da `main`.
+This repository is developed **in the open**: the `main` branch receives
+ongoing work and **is not a release**. Do not put a server into production by
+building from `main`.
 
-O que é **estável e suportado**:
+What is **stable and supported**:
 
-- **Imagens oficiais (ISO/qcow2):** publicadas no SourceForge e no site
-  (docs.capivaraos.org). É o que se instala em produção.
-- **Atualizações:** o canal **`stable`** do repositório assinado
-  (`repo.capivaraos.org`), consumido pelo pacote `capivaraos-herd-repos`. O canal
-  `testing` é pré-produção (QA).
-- **Marcos no git:** cada release corresponde a uma **tag** (ex.: `herd-1.0.1`).
+- **Official images (ISO and qcow2):** published on SourceForge and linked from
+  the website. This is what you install in production.
+- **Updates:** the **`stable`** channel of the signed repository
+  (`repo-herd.capivaraos.org`), configured by the `capivaraos-herd-repos`
+  package. The `testing` channel is pre-release (QA).
+- **Git:** each release has a **tag** (for example `herd-2.0.0`). The Herd
+  1.0.1 sources (Fedora 44) are at the `herd-1.0.1` tag.
 
-Ou seja: código na `main` = em evolução e auditável; **release = ISO publicada +
-canal `stable` + tag**. Ver `docs/repo/README.md` para o fluxo de publicação.
+In short: code on `main` is evolving and auditable; **a release is a published
+image, the `stable` channel and a tag**. See `docs/repo/README.md` for how the
+repository is laid out and signed.
 
-## O que é gerado
+## What is built
 
-A partir de uma **blueprint osbuild** única (`blueprints/capivaraos-herd.toml`),
-o `build.sh` produz:
+From a single **osbuild blueprint** (`blueprints/capivaraos-herd.toml`),
+`build.sh` produces:
 
-| Imagem            | Uso                                   |
+| Image             | Use                                   |
 |-------------------|---------------------------------------|
-| `qcow2`           | Nuvem/VM (com cloud-init)             |
-| `image-installer` | ISO instalador headless (bare-metal)  |
+| `qcow2`           | Cloud and virtual machines            |
+| `image-installer` | Headless installer ISO (bare metal)   |
 
-Para **x86_64** e **aarch64** (um builder osbuild por arquitetura — o osbuild
-compõe para a arquitetura do host; para aarch64, rode num host/VM aarch64).
+osbuild composes for the architecture of the host it runs on. The published
+images are x86_64.
 
-## Por que osbuild / Image Builder (e não kickstart+livemedia)
+## Why osbuild (and not kickstart and livemedia-creator)
 
-Os desktops (Marsh/Pup/Snout) usam kickstart + `livemedia-creator`, ótimo para
-ISO live. O Herd precisa de **qcow2 e ISO** como cidadãos de primeira classe,
-**multi-arch** e reprodutível — terreno do **osbuild**.
+Herd needs **qcow2 and an installer ISO** as first-class outputs from one
+blueprint, which is what **osbuild** is for.
 
-## Pré-requisitos
+## Requirements
 
-- Host **Fedora 44** (mesma base das spins) — builda direto na máquina de dev,
-  sem VM.
-- osbuild-composer + composer-cli:
+- A Fedora **45** host. The blueprint sets `distro = "fedora-45"`; the build
+  runs directly on the build machine, with no mock or container.
+- osbuild-composer and composer-cli:
   ```bash
   sudo dnf install -y osbuild-composer composer-cli rpm-build createrepo_c
   sudo systemctl enable --now osbuild-composer.socket
@@ -54,72 +54,81 @@ ISO live. O Herd precisa de **qcow2 e ISO** como cidadãos de primeira classe,
 ## Build
 
 ```bash
-# 1. Branding do Herd (RPM) e repo local para o composer consumir
+# 1. The Herd branding RPM, in a local repository for the composer
 ./rpm/build-rpm.sh
 NEVRA=$(rpmspec -q --qf '%{name}-%{version}-%{release}.%{arch}\n' \
     rpm/capivaraos-herd-branding.spec | head -1)
-mkdir -p /var/tmp/capivaraos-herd-repo
-cp ~/rpmbuild/RPMS/noarch/${NEVRA}.rpm /var/tmp/capivaraos-herd-repo/
-createrepo_c /var/tmp/capivaraos-herd-repo
+REPO=/var/tmp/capivaraos-herd-repo
+mkdir -p "$REPO"
+[ -O "$REPO" ] && [ ! -L "$REPO" ] || { echo "$REPO is not yours"; exit 1; }
+cp ~/rpmbuild/RPMS/noarch/${NEVRA}.rpm "$REPO"/
+createrepo_c "$REPO"
 
-# 2. Imagens (qcow2 + ISO) para a arquitetura do host
+# 2. Images (qcow2 and ISO) for the host architecture
 ./build.sh
 ```
 
-Saída em `out/`.
+Output goes to `out/`.
 
-## ISO instaladora brandeada (lorax)
+## Branded installer ISO (lorax)
 
-O `image-installer` do osbuild acima é funcional, mas o **instalador** (menu de
-boot + Anaconda) herda a marca Fedora, que o osbuild não deixa sobrescrever.
-Para uma ISO instaladora **sem marca Fedora**, use o fluxo lorax:
+The osbuild `image-installer` above works, but its **installer** (boot menu and
+Anaconda) carries the Fedora brand; this build does not change it there. For an
+installer ISO **without the Fedora brand**, use the lorax flow:
 
 ```bash
-# 1. RPMs de branding E de logos do instalador, servidos no repo local
+# 1. Branding and installer logo RPMs, served from the local repository
 ./rpm/build-rpm.sh
 ./rpm/build-rpm-logos.sh
-mkdir -p /var/tmp/capivaraos-herd-repo
+REPO=/var/tmp/capivaraos-herd-repo
+mkdir -p "$REPO"
+[ -O "$REPO" ] && [ ! -L "$REPO" ] || { echo "$REPO is not yours"; exit 1; }
 cp ~/rpmbuild/RPMS/noarch/capivaraos-herd-branding-*.rpm \
    ~/rpmbuild/RPMS/noarch/capivaraos-herd-logos-*.rpm \
-   /var/tmp/capivaraos-herd-repo/
-createrepo_c /var/tmp/capivaraos-herd-repo
+   "$REPO"/
+createrepo_c "$REPO"
 
-# 2. ISO instaladora offline e brandeada (precisa root)
+# 2. Offline, branded installer ISO (needs root)
 sudo dnf install -y lorax createrepo_c
 sudo ./build-iso.sh
 ```
 
-- `capivaraos-herd-logos` substitui o `fedora-logos` no ambiente do Anaconda.
-- `lorax -p "Herd by CapivaraOS"` brandeia o nome de produto (menu/`.buildstamp`).
-- `mkksiso` embute o `kickstart/capivaraos-herd.ks` (perfil de servidor) e um
-  repo offline, tornando a instalação autossuficiente.
+- `capivaraos-herd-logos` replaces `fedora-logos` in the Anaconda environment.
+- `lorax -p "Herd by CapivaraOS"` sets the product name (boot menu and
+  `.buildstamp`).
+- `mkksiso` embeds `kickstart/capivaraos-herd.ks` (the server profile) and an
+  offline repository.
 
-Saída: `out/CapivaraOS-HERD-<versão>-<arch>.installer.iso`.
+Output: `out/CapivaraOS-HERD-<version>-<arch>.installer.iso`.
 
-## Perfil do sistema (v1)
+## System profile (Herd Community 2.0)
 
-Headless · SELinux **enforcing** · `firewalld` restritivo (só SSH) · SSH
-endurecido · cloud-init na qcow2 · locale pt_BR/en_US · timezone configurável.
+Cockpit web console · automatic security updates from the signed
+repository · `herd-upgrade` pre-flight for later Fedora base releases (none is
+available for Herd 2.0 yet).
 
-## Estrutura
+## Layout
 
 ```
-blueprints/capivaraos-herd.toml   # fonte de verdade do build (osbuild)
-build.sh                          # pipeline osbuild (qcow2 + ISO)
-build-iso.sh                      # ISO instaladora brandeada (lorax)
-kickstart/capivaraos-herd.ks      # perfil de servidor (ISO/Anaconda)
-rpm/                              # specs: branding, logos (instalador), hardening
-branding/                         # os-release/issue/motd, arte do Cockpit, fix BLS
-hardening/                        # SSH/senha/umask + herd-compliance-scan
+blueprints/capivaraos-herd.toml   # build source of truth (osbuild)
+build.sh                          # osbuild pipeline (qcow2 and ISO)
+build-iso.sh                      # branded installer ISO (lorax)
+kickstart/capivaraos-herd.ks      # server profile (ISO / Anaconda)
+rpm/                              # specs: branding, logos, hardening, repos, autoupdate, upgrade
+branding/                         # os-release/issue/motd, Cockpit artwork, BLS fix, fastfetch
+hardening/                        # SSH, password, umask, herd-compliance-scan, herd-harden
+repo/, keys/, publish-repo.sh     # signed update repository and its public keys
+autoupdate/, upgrade/             # automatic security updates, herd-upgrade
+tools/, tests/                    # advisory metadata tool and tests
 ```
 
-## Licença e marca
+## Licence and trademark
 
-- **Código** (scripts de build, kickstart, specs, configs): **GPLv3** — ver
+- **Code** (build scripts, kickstart, specs, configuration): **GPLv3**; see
   [LICENSE](LICENSE).
-- **Nome e logotipo** "CapivaraOS" / "Herd": **marca protegida**, todos os
-  direitos reservados — ver [TRADEMARK.md](TRADEMARK.md). Você pode usar e
-  redistribuir o software; para redistribuir versões **modificadas**, remova a
-  identidade visual (logo, nome, `os-release`).
-- Conteúdo de terceiros embarcado mantém sua licença de origem (ex.:
-  `hardening/scap/ssg-fedora-ds.xml` sob BSD-3-Clause).
+- **The "CapivaraOS" and "Herd" names and logo** are **trademarks of the
+  CapivaraOS project**, all rights reserved; see [TRADEMARK.md](TRADEMARK.md). You may use and
+  redistribute the software; to redistribute **modified** versions, remove the
+  visual identity (logo, name, `os-release`).
+- Bundled third-party content keeps its original licence (for example
+  `hardening/scap/ssg-fedora-ds.xml` under BSD-3-Clause).

@@ -1,68 +1,97 @@
-# capivaraos-herd-repos — configuração do repositório de updates do Herd
+# capivaraos-herd-repos: configuration of the Herd update repository
 #
-# Points the INSTALLED system at the signed CapivaraOS Herd update repository
-# and ships the public GPG key that verifies packages and metadata. Without it
-# an installed Herd receives Fedora updates only. Included in the image through
-# the kickstart %packages and the osbuild blueprint (both build paths).
+# Points the installed system at the signed CapivaraOS Herd update repository
+# and ships the public keys that verify its packages and metadata. Without it
+# an installed Herd receives Fedora updates but not the Herd packages. Both
+# build paths (kickstart %packages and the osbuild blueprint) include it.
 #
-# Só arquivos de config + chave (sem scriptlets que toquem arquivos de
-# terceiros). O %post apenas importa a chave pública no chaveiro do rpm, para o
-# gpgcheck funcionar de imediato, sem o prompt de "importar chave?".
+# Config files and public keys only, no scriptlets. rpm refuses to import a
+# key from a scriptlet (it cannot take the keyring lock during the
+# transaction). Instead a dnf5-automatic.service drop-in (Source3) imports
+# both keys before each unattended run: into the rpm keyring, for package
+# signatures, and, through a makecache of the two Herd repositories, into
+# dnf5's key store for repository metadata (a step that can fail without
+# stopping the run). An interactive dnf asks and imports them from gpgkey=.
 
 Name:           capivaraos-herd-repos
-Version:        1.0.0
-# ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
-# in a shared ~/rpmbuild).
-Release:        1%{?dist}.herd
-Summary:        Repositório de atualizações assinado do CapivaraOS Herd (Community)
+Version:        2.0.0
+# ".herd" suffix, as in branding, hardening and logos: keeps the NEVRA apart
+# from the other editions' packages in a shared ~/rpmbuild.
+Release:        2%{?dist}.herd
+Summary:        Signed update repository configuration for CapivaraOS Herd
 
-# Só config nossa (.repo) + a nossa chave pública. GPLv3 cobre a config; a chave
-# é material criptográfico do projeto (sem licença de software).
+# Our configuration and our public keys only. GPLv3 covers the configuration;
+# the keys are the project's cryptographic material (no software licence).
 License:        GPL-3.0-or-later
 URL:            https://capivaraos.org
 BuildArch:      noarch
 
-# Arquivos soltos (não um tarball): o .repo e a chave pública são copiados para
-# ~/rpmbuild/SOURCES pelo build-rpm-repos.sh.
+# Plain files, not a tarball: build-rpm-repos.sh copies them to
+# ~/rpmbuild/SOURCES.
 Source0:        capivaraos-herd.repo
 Source1:        RPM-GPG-KEY-capivaraos-herd
+# Reserve signing key (public part), trusted alongside the current one.
+Source2:        RPM-GPG-KEY-capivaraos-herd-reserve
+Source3:        50-capivaraos-herd-keys.conf
 
-# Nome canônico "*-release" que outros pacotes/documentação podem exigir.
+# Canonical "*-release" name that other packages or documentation may require.
 Provides:       capivaraos-herd-release = %{version}-%{release}
 
 %description
-Configuração do repositório de atualizações assinado do CapivaraOS Herd
-Community: instala /etc/yum.repos.d/capivaraos-herd.repo (canais stable e
-testing) e a chave GPG pública em /etc/pki/rpm-gpg/, importando-a no chaveiro
-do rpm. A partir daí um Herd instalado recebe automaticamente os pacotes
-próprios do projeto (capivaraos-herd-*, herd-harden, herd-compliance-scan e
-correções de segurança), com verificação de assinatura de pacote e de metadados
-(gpgcheck + repo_gpgcheck). A chave privada de assinatura permanece offline; só
-a pública é distribuída aqui.
+Configuration of the signed CapivaraOS Herd update repository: installs
+/etc/yum.repos.d/capivaraos-herd.repo (stable and testing channels), the two
+public Herd signing keys in /etc/pki/rpm-gpg/, and a drop-in for
+dnf5-automatic.service that imports those keys before each unattended run.
+Packages and repository metadata are signature-checked (gpgcheck and
+repo_gpgcheck). Only public keys are distributed here.
 
-# Sem %prep/%build: os sources são arquivos soltos, não há o que extrair/compilar.
+# No %prep or %build: the sources are plain files, with nothing to unpack or build.
 
 %install
 install -D -m 0644 %{SOURCE0} \
     %{buildroot}%{_sysconfdir}/yum.repos.d/capivaraos-herd.repo
 install -D -m 0644 %{SOURCE1} \
     %{buildroot}%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
-
-%post
-# Importa a chave pública no chaveiro do rpm para o gpgcheck funcionar sem o
-# prompt interativo "importar esta chave GPG?" no primeiro update. Idempotente
-# (reimportar a mesma chave é no-op). Funciona OFFLINE (a chave está no disco),
-# então roda bem também no %post do install via ISO.
-if [ -x /usr/bin/rpmkeys ]; then
-    rpmkeys --import %{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd \
-        >/dev/null 2>&1 || true
-fi
+install -D -m 0644 %{SOURCE2} \
+    %{buildroot}%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd-reserve
+install -D -m 0644 %{SOURCE3} \
+    %{buildroot}%{_prefix}/lib/systemd/system/dnf5-automatic.service.d/50-capivaraos-herd-keys.conf
 
 %files
 %config(noreplace) %{_sysconfdir}/yum.repos.d/capivaraos-herd.repo
 %{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd
+%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-capivaraos-herd-reserve
+%dir %{_prefix}/lib/systemd/system/dnf5-automatic.service.d
+%{_prefix}/lib/systemd/system/dnf5-automatic.service.d/50-capivaraos-herd-keys.conf
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Changelog text revised. No functional change.
+
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Sun Nov 15 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.4.alpha1.herd
+- Ships the Herd reserve signing key (fingerprint
+  F4EF73FAF6157390BB6538FFA765804F4ADA507E) next to the current one, and
+  lists both in gpgkey=.
+- A drop-in for dnf5-automatic.service imports both keys before each
+  unattended run: into the rpm keyring, and through a makecache of the two
+  Herd repositories into dnf5's key store for metadata checks (a step that
+  can fail without stopping the run).
+- %%post no longer imports the keys; the dnf5-automatic drop-in does it.
+
+* Sun Nov 15 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.3.alpha1.herd
+- No functional change to the repository configuration.
+
+* Tue Nov 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- Repository address is https://repo-herd.capivaraos.org/f$releasever/, the
+  dedicated Herd update host. Same signing key; $releasever still follows a
+  system upgrade.
+
+* Mon Sep 21 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45): bump de versão; o baseurl usa $releasever.
+
 * Sat Aug 29 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-1.herd
 - Pacote inicial de configuração de repositório: instala o
   capivaraos-herd.repo (canais stable + testing, gpgcheck + repo_gpgcheck) e a

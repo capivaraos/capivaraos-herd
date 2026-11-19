@@ -1,22 +1,23 @@
-# capivaraos-herd-logos — identidade do INSTALADOR (Anaconda) do CapivaraOS HERD
+# capivaraos-herd-logos: identity of the CapivaraOS Herd INSTALLER (Anaconda)
 #
-# Substitui o fedora-logos NO AMBIENTE DO INSTALADOR (lorax), removendo a marca
-# Fedora das telas do Anaconda. Modelado no generic-logos (o pacote de-brandado
-# oficial do Fedora): fornece os virtuais system-logos/redhat-logos e conflita
-# com fedora-logos, então o Anaconda (que requer o virtual system-logos) usa o
-# nosso. NÃO é instalado no sistema alvo — entra só na lista de pacotes do lorax.
+# Replaces fedora-logos IN THE INSTALLER ENVIRONMENT (lorax), removing the
+# Fedora brand from the Anaconda screens. Modelled on generic-logos (Fedora's
+# official unbranded package): it provides the system-logos/redhat-logos/
+# fedora-logos names, and build-iso.sh excludes the real fedora-logos, so
+# Anaconda (which requires the system-logos virtual) uses ours. It is NOT installed on the target system; it
+# is only in the lorax package list.
 #
-# Os pixmaps são gerados no %build a partir da logo da capivara (branca) sobre a
-# cor da marca (#6B4F36), nas dimensões que o Anaconda espera.
+# The pixmaps are generated in %build from the (white) capybara logo on the
+# brand colour (#6B4F36), at the sizes Anaconda expects.
 
 Name:           capivaraos-herd-logos
-Version:        1.0.0
+Version:        2.0.0
 # ".herd" suffix: same convention as the other spins (avoids NEVRA collisions
 # in a shared ~/rpmbuild).
-Release:        3%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Identidade do instalador (Anaconda) do CapivaraOS HERD
 
-# Logotipo = marca registrada do projeto (ver TRADEMARK.md), não licença aberta.
+# The logo is a trademark of the project (see TRADEMARK.md), not an open licence.
 License:        LicenseRef-CapivaraOS-Trademark
 URL:            https://capivaraos.org
 BuildArch:      noarch
@@ -25,12 +26,13 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  ImageMagick
 
-# Substitui o fedora-logos no ambiente do instalador. O lorax deriva o pacote de
-# logos do release (fedora-release-server) e instala "fedora-logos" POR NOME
-# (treebuilder.py). FORNECEMOS os virtuais + o próprio nome fedora-logos; o
-# build-iso.sh EXCLUI o fedora-logos real dos repos Fedora, então o nosso é o
-# único provedor de "fedora-logos" e é o escolhido. (Não usamos Obsoletes: com o
-# -i explícito, o dnf acusava "conflicting requests" contra o fedora-logos real.)
+# Replaces fedora-logos in the installer environment. lorax derives the logos
+# package from the release (fedora-release-server) and installs "fedora-logos"
+# BY NAME (treebuilder.py). We PROVIDE the virtuals and the fedora-logos name
+# itself; build-iso.sh EXCLUDES the real fedora-logos from the Fedora
+# repositories, so ours is the only "fedora-logos" provider and is chosen. (No
+# Obsoletes: with an explicit -i, dnf reported "conflicting requests" against
+# the real fedora-logos.)
 Provides:       system-logos = 42.0.1
 Provides:       redhat-logos = 42.0.1
 Provides:       fedora-logos = 42.0.1
@@ -45,14 +47,14 @@ a marca Fedora. Não faz parte do sistema instalado.
 %setup -q
 
 %build
-# Logo da barra lateral (branca sobre transparente), ajustada à área da sidebar.
+# Sidebar logo (white on transparent), fitted to the sidebar area.
 convert src/capivaraos-logo-branca.png -resize 240x110 sidebar-logo.png
-# Fundos sólidos na cor da marca.
+# Solid backgrounds in the brand colour.
 convert -size 406x767  xc:'#6B4F36' sidebar-bg.png
 convert -size 1040x132 xc:'#6B4F36' topbar-bg.png
-# Cabeçalho legado (pequeno).
+# Legacy header (small).
 convert src/capivaraos-logo-branca.png -resize 119x36 anaconda_header.png
-# Splash de boot: logo centralizada sobre a cor da marca.
+# Boot splash: logo centred on the brand colour.
 convert -size 640x480 xc:'#6B4F36' \
     \( src/capivaraos-logo-branca.png -resize 420x \) \
     -gravity center -composite splash.png
@@ -62,8 +64,8 @@ cp splash.png syslinux-splash.png
 install -d %{buildroot}%{_datadir}/anaconda/pixmaps
 install -m 0644 sidebar-logo.png sidebar-bg.png topbar-bg.png anaconda_header.png \
     %{buildroot}%{_datadir}/anaconda/pixmaps/
-# O Anaconda carrega fedora.css por padrão; como conflitamos com o fedora-logos,
-# somos os donos desse caminho e entregamos o nosso tema nele.
+# Anaconda loads fedora.css by default; since build-iso.sh excludes
+# fedora-logos, we own that path and ship our theme in it.
 install -m 0644 capivaraos-herd.css %{buildroot}%{_datadir}/anaconda/pixmaps/fedora.css
 install -d %{buildroot}%{_datadir}/anaconda/boot
 install -m 0644 splash.png syslinux-splash.png %{buildroot}%{_datadir}/anaconda/boot/
@@ -80,6 +82,16 @@ install -m 0644 splash.png syslinux-splash.png %{buildroot}%{_datadir}/anaconda/
 %{_datadir}/anaconda/boot/syslinux-splash.png
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Comments and changelog text revised. No functional change.
+
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45). Nenhuma mudança de arte; só bump de versão para a
+  série 2.x (0.1.alpha1).
+
 * Mon Aug 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-3.herd
 - Remove Obsoletes fedora-logos (causava "conflicting requests" no lorax com o
   -i explícito). Mantém Provides fedora-logos; o build-iso.sh passa a excluir o

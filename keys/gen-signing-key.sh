@@ -1,41 +1,81 @@
 #!/bin/bash
 # =============================================================================
-# Signing key ceremony for the CapivaraOS Herd repository.
+# Generates the CapivaraOS Herd repository signing key pair.
 # =============================================================================
-# Gera o par de chaves GPG que assina os RPMs e os metadados do repositório.
+# Generates the GPG key pair that signs the repository's RPMs and metadata.
 #
-# ATENÇÃO — EXECUTE OFFLINE, uma única vez, numa máquina de confiança (de
-# preferência air-gapped ou um live USB dedicado). A chave PRIVADA resultante é
-# o ativo mais sensível do projeto: quem a tem pode empurrar update malicioso
-# para TODOS os servidores Herd. Ela NUNCA deve:
-#   - ser commitada neste (ou em qualquer) repositório;
-#   - ficar numa máquina exposta à internet sem necessidade;
-#   - ser copiada para o servidor/CDN que hospeda o repo.
+# Run once. Whoever holds the resulting PRIVATE key can sign an update that
+# every Herd system trusting this key accepts, so it never goes into this
+# repository.
 #
-# After generating: export the PUBLIC key into the repo (it is what the
-# capivaraos-herd-repos package ships); the PRIVATE key is kept offline.
-# See keys/README.md.
+# Afterwards: commit the PUBLIC key (the capivaraos-herd-repos package ships
+# it). The private key never goes into the repository. See keys/README.md.
 # =============================================================================
 set -euo pipefail
+# Every file this script creates is readable by its owner only, from the
+# moment it is created (the public key is opened up afterwards), and no
+# redirection replaces an existing regular file or follows a symlink to one.
+umask 077
+set -o noclobber
 
 KEY_NAME="CapivaraOS Herd (repo signing key)"
 KEY_EMAIL="capivaraos-bot@users.noreply.github.com"
 KEY_COMMENT="https://capivaraos.org"
 OUTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PUB_OUT="${OUTDIR}/RPM-GPG-KEY-capivaraos-herd"
+PRIV_OUT=""
+REV_OUT=""
+PUB_WRITTEN=0
+
+# Never replace the committed public key: a new one would become the trust
+# anchor that capivaraos-herd-repos ships.
+if [ -e "$PUB_OUT" ] || [ -L "$PUB_OUT" ]; then
+    echo "ERROR: ${PUB_OUT} already exists; this script does not replace it." >&2
+    exit 1
+fi
+
 GNUPGHOME_TMP="$(mktemp -d)"
 export GNUPGHOME="$GNUPGHOME_TMP"
-chmod 700 "$GNUPGHOME_TMP"
 
-echo "== Gerando chave de assinatura do repositório Herd =="
-echo "   GNUPGHOME temporário: $GNUPGHOME_TMP"
-echo "   (a chave privada NÃO será deixada no seu ~/.gnupg)"
+# On any exit: stop the GnuPG daemons of the temporary home and remove it. If
+# the run stopped early, say which secret files were already written. The
+# original exit status is kept.
+cleanup() {
+    local rc=$?
+    gpgconf --homedir "$GNUPGHOME_TMP" --kill all 2>/dev/null || true
+    rm -rf "$GNUPGHOME_TMP"
+    if [ "$rc" -ne 0 ]; then
+        echo "ERROR: the key generation stopped (exit ${rc})." >&2
+        for f in "$PRIV_OUT" "$REV_OUT"; do
+            [ -n "$f" ] && [ -e "$f" ] && echo "  A partial key file remains: $f" >&2
+        done
+        if [ "$PUB_WRITTEN" = 1 ]; then
+            echo "  Delete ${PUB_OUT} before running this script again." >&2
+        fi
+    fi
+    exit "$rc"
+}
+trap cleanup EXIT
+
+# Refuses to write over an existing file or symlink.
+new_file() {
+    if [ -e "$1" ] || [ -L "$1" ]; then
+        echo "ERROR: $1 already exists; move it away first." >&2
+        exit 1
+    fi
+}
+
+echo "== Generating the Herd repository signing key =="
+echo "   Temporary GNUPGHOME: $GNUPGHOME_TMP"
+echo "   (the private key is NOT left in your ~/.gnupg)"
 echo
 
-# RSA 4096 + SHA-512: universalmente aceito pelo rpm/createrepo em qualquer
-# distro/ferramenta (ed25519 é ótimo mas nem toda cadeia legada valida). Sem
-# data de expiração na chave-mestra; rotação é decisão de processo (ver README).
+# RSA 4096, the type of the current Herd key (C852 6722 ... 85C0); older tool
+# chains may not verify ed25519 signatures. The digest for RPM signatures is
+# set by %_gpg_digest_algo in ~/.rpmmacros. The primary key has no expiry
+# date; rotation is covered in keys/README.md.
 cat > "${GNUPGHOME_TMP}/keyparams" <<EOF
-%echo Gerando par RSA 4096 para assinatura de RPM/metadados...
+%echo Generating an RSA 4096 key pair to sign RPMs and metadata...
 Key-Type: RSA
 Key-Length: 4096
 Key-Usage: sign
@@ -45,40 +85,57 @@ Name-Email: ${KEY_EMAIL}
 Expire-Date: 0
 %ask-passphrase
 %commit
-%echo Concluído.
+%echo Done.
 EOF
 
 gpg --batch --full-gen-key "${GNUPGHOME_TMP}/keyparams"
 
 KEYID="$(gpg --list-keys --with-colons "$KEY_EMAIL" | awk -F: '/^pub:/{print $5; exit}')"
+FPR="$(gpg --list-keys --with-colons "$KEY_EMAIL" | awk -F: '/^fpr:/{print $10; exit}')"
+[ -n "$KEYID" ] && [ -n "$FPR" ] || { echo "ERROR: cannot read the new key" >&2; exit 1; }
 echo
-echo "== Chave gerada: ${KEYID} =="
+echo "== Key generated: ${KEYID} =="
 
-# Exporta a PÚBLICA (ASCII-armored) para dentro do repo — este arquivo PODE ser
-# commitado; é o que o pacote capivaraos-herd-repos entrega aos clientes.
-PUB_OUT="${OUTDIR}/RPM-GPG-KEY-capivaraos-herd"
-gpg --armor --export "$KEYID" > "$PUB_OUT"
-echo "Pública exportada -> ${PUB_OUT}  (COMMITAR este arquivo)"
+# Exports the PUBLIC key (ASCII-armored) into the repository. This file may be
+# committed; the capivaraos-herd-repos package ships it to clients.
+# Each output file is opened once, as a new file, and written through that
+# descriptor; a failed export still reports the file.
+exec 3> "$PUB_OUT"
+PUB_WRITTEN=1
+gpg --armor --export "$KEYID" >&3
+exec 3>&-
+chmod 644 "$PUB_OUT"
+echo "Public key exported -> ${PUB_OUT}  (COMMIT this file)"
 
-# Export the PRIVATE key to a file OUTSIDE the repo, to be kept offline.
-PRIV_OUT="${HOME}/capivaraos-herd-repo-signing-PRIVATE-${KEYID}.asc"
-gpg --armor --export-secret-keys "$KEYID" > "$PRIV_OUT"
-chmod 600 "$PRIV_OUT"
+# Exports the PRIVATE key to a file OUTSIDE the repository.
+# The name is recorded only once the file is known to be new, so the exit
+# message never names a file this run did not write.
+f="${HOME}/capivaraos-herd-repo-signing-PRIVATE-${KEYID}.asc"
+new_file "$f"
+exec 3> "$f"
+PRIV_OUT="$f"
+gpg --armor --export-secret-keys "$KEYID" >&3
+exec 3>&-
+
+# gpg wrote a revocation certificate when it generated the key; copy it out
+# too, before the temporary GNUPGHOME is removed.
+f="${HOME}/capivaraos-herd-repo-signing-REVOCATION-${KEYID}.rev"
+new_file "$f"
+exec 3> "$f"
+REV_OUT="$f"
+cat "${GNUPGHOME_TMP}/openpgp-revocs.d/${FPR}.rev" >&3
+exec 3>&-
 
 cat <<EOF
 
-== NEXT STEPS (do them now, still offline) ==
-1. STORE the private key safely and DELETE the temporary file:
+== NEXT STEPS (do them now) ==
+1. The private key and its revocation certificate were written to:
      ${PRIV_OUT}
-   -> keep it offline and destroy the file:
-        shred -u "${PRIV_OUT}"    # (or delete it securely)
-2. Anote o Key ID/fingerprint (publique o fingerprint na página de Segurança):
-     gpg --fingerprint ${KEYID}
-3. Commite APENAS a pública: keys/RPM-GPG-KEY-capivaraos-herd
-4. Na máquina de PUBLICAÇÃO (assina o repo), importe a privada só quando for
-   assinar, via publish-repo.sh, e configure %_gpg_name (ver keys/README.md).
+     ${REV_OUT}
+2. Record the key ID and fingerprint, and publish the fingerprint on the
+   Security page:
+     ${FPR}
+3. Commit ONLY the public key: keys/RPM-GPG-KEY-capivaraos-herd
 
-Limpando o GNUPGHOME temporário...
 EOF
-rm -rf "$GNUPGHOME_TMP"
-echo "Feito. NÃO esqueça de proteger a chave privada."
+echo "Done. Protect the private key."

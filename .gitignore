@@ -4,15 +4,18 @@
 *.img
 *.log
 
-# Artefatos do lorax quando rodado com logdir na raiz do repo (build-iso.sh)
+# lorax artefacts when run with logdir at the repository root (build-iso.sh)
 /debugdata/
 /pkglists/
 /lorax.conf
 /*-pkgsizes.txt
 
-# CHAVE PRIVADA de assinatura do repo — NUNCA versionar (ver keys/README.md).
-# A pública (keys/RPM-GPG-KEY-capivaraos-herd) É versionada de propósito.
+# Repository signing PRIVATE key: never commit it (see keys/README.md).
+# The public key (keys/RPM-GPG-KEY-capivaraos-herd) is committed on purpose.
 *PRIVATE*
 *.private.asc
 keys/*secret*
 keys/*.sec.asc
+
+# Python bytecode
+__pycache__/

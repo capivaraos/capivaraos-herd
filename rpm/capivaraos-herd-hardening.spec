@@ -1,27 +1,34 @@
-# capivaraos-herd-hardening — perfil básico de segurança do CapivaraOS HERD
+# capivaraos-herd-hardening: baseline security profile of CapivaraOS Herd
 #
-# Ships the HERD Community hardening configuration as FILES, installed by
-# both build paths (qcow2/osbuild via the blueprint, ISO via kickstart): a
-# single source.
+# Single source of the Herd hardening configuration for BOTH build paths
+# (qcow2/osbuild through the blueprint, ISO through the kickstart); only the
+# kernel argument audit_backlog_limit is also set by the kickstart and the
+# blueprint. Settings ship as drop-in files where the owning package reads a .d
+# directory. Where a setting lives in a file owned by another package,
+# %posttrans edits it, idempotently: /etc/dnf/dnf.conf, /etc/login.defs, /etc/audit/auditd.conf,
+# /etc/audit/plugins.d/syslog.conf, and the kernel command line in
+# /etc/default/grub and the existing BLS entries. It also generates
+# /etc/audit/rules.d/privileged.rules from the setuid/setgid binaries present.
 #
-# Conteúdo:
-#   - SSH endurecido           (/etc/ssh/sshd_config.d/50-capivaraos-herd.conf)
-#   - Política de senha        (/etc/security/pwquality.conf.d/50-capivaraos-herd.conf)
-#   - umask 027 em login       (/etc/profile.d/capivaraos-herd-umask.sh)
-#   - Auditoria (auditd)       (/etc/audit/rules.d/*.rules — ruleset SSG standard)
-#   - cramfs desabilitado      (/etc/modprobe.d/cramfs.conf)
-#   - herd-compliance-scan     (relatório OpenSCAP — perfil 'standard' do SSG)
-#   - herd-harden              (endurecimento em 1 comando — OpenSCAP + Ansible)
+# Contents:
+#   - Hardened SSH             (/etc/ssh/sshd_config.d/50-capivaraos-herd.conf)
+#   - Password policy          (/etc/security/pwquality.conf.d/50-capivaraos-herd.conf)
+#   - umask 027 at login       (/etc/profile.d/capivaraos-herd-umask.sh)
+#   - Auditing (auditd)        (/etc/audit/rules.d/*.rules, SSG standard ruleset)
+#   - cramfs disabled          (/etc/modprobe.d/cramfs.conf)
+#   - herd-compliance-scan     (OpenSCAP report, SSG 'standard' profile)
+#   - herd-harden              (one-command hardening, OpenSCAP + Ansible)
 #
-# SELinux fica em Enforcing pela config do instalador/blueprint; num servidor
-# mínimo os booleans vêm nos padrões seguros — não mexemos aqui (mudar boolean à
-# toa quebra serviço). Para um perfil mais rígido, use o herd-harden.
+# SELinux is Enforcing (kickstart `selinux --enforcing`; Fedora default on the
+# qcow2 path); on a minimal server the booleans already have safe defaults and are not changed
+# here (changing a boolean without need breaks services). For a stricter
+# profile, use herd-harden.
 
 Name:           capivaraos-herd-hardening
-Version:        1.0.0
+Version:        2.0.0
 # ".herd" suffix: same convention as branding/logos (avoids NEVRA
 # collisions in a shared ~/rpmbuild).
-Release:        11%{?dist}.herd
+Release:        2%{?dist}.herd
 Summary:        Perfil básico de segurança (SSH, senha, umask, compliance) do CapivaraOS HERD
 
 # GPL-3.0-or-later = nossa config/scripts; BSD-3-Clause = datastream SSG vendorado.
@@ -66,12 +73,12 @@ Requires:       crypto-policies-scripts
 Provides:       system-hardening-config = %{version}-%{release}
 
 %description
-Perfil básico de segurança do CapivaraOS HERD Community: SSH endurecido,
+Perfil básico de segurança do CapivaraOS HERD Community: SSH fortalecido,
 política de qualidade de senha (pwquality), umask restritivo em sessões de
 login e os utilitários herd-compliance-scan (relatório de conformidade
 OpenSCAP, perfil "standard" do SCAP Security Guide do Fedora) e herd-harden
-(endurecimento em 1 comando: aplica um perfil SSG via Ansible, com dry-run por
-padrão). Voltado a servidor headless com base Fedora 44.
+(fortalecimento em 1 comando: aplica um perfil SSG via Ansible, com dry-run por
+padrão). Voltado a servidor headless com base Fedora 45.
 
 %prep
 %setup -q
@@ -178,6 +185,23 @@ done
 %license scap/LICENSE.SCAP-Security-Guide
 
 %changelog
+* Wed Nov 18 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-2.herd
+- Package description names the edition (Community); changelog text revised.
+  No functional change.
+
+* Tue Nov 17 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-1.herd
+- Herd 2.0.0 release. No functional change.
+
+* Tue Nov 10 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.2.alpha1.herd
+- herd-harden (banner and --help) and the package description use the
+  Portuguese term "fortalecimento" for hardening.
+- Comment-only changes in the spec and in pwquality.conf.d. No change in
+  behaviour.
+
+* Sun Sep 20 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 2.0.0-0.1.alpha1.herd
+- Geração 2.x (Fedora 45): datastream SSG vendorado atualizado para o do
+  Fedora 45 (gerado 2026-09-02). Licença BSD-3 do SSG inalterada.
+
 * Fri Aug 28 2026 CapivaraOS <capivaraos-bot@users.noreply.github.com> - 1.0.0-11.herd
 - Requires: crypto-policies-scripts (~390 KiB) — garante o update-crypto-policies
   (usado pela remediação dos perfis, ex.: ospp seta crypto-policy FIPS, e citado
