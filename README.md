@@ -16,8 +16,7 @@ What is **stable and supported**:
 - **Updates:** the **`stable`** channel of the signed repository
   (`repo-herd.capivaraos.org`), configured by the `capivaraos-herd-repos`
   package. The `testing` channel is pre-release (QA).
-- **Git:** each release has a **tag** (for example `herd-2.0.0`). The Herd
-  1.0.1 sources (Fedora 44) are at the `herd-1.0.1` tag.
+- **Git:** each release from 2.0.0 on has a **tag** (for example `herd-2.0.0`).
 
 In short: code on `main` is evolving and auditable; **a release is a published
 image, the `stable` channel and a tag**. See `docs/repo/README.md` for how the
